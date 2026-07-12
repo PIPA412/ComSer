@@ -52,7 +52,8 @@ public class ComAnnouncementController extends BaseController {
     public AjaxResult add(@RequestBody ComAnnouncement announcement) {
         announcement.setCreateBy(getUsername());
         announcement.setStatus("草稿");
-        return toAjax(announcementService.save(announcement));
+        announcementService.save(announcement);
+        return success(announcement.getAnnouncementId());
     }
 
     @PreAuthorize("@ss.hasPermi('com:announcement:edit')")
@@ -71,7 +72,17 @@ public class ComAnnouncementController extends BaseController {
         announcement.setStatus("已发布");
         announcement.setPublishTime(new java.util.Date());
         announcement.setUpdateBy(getUsername());
-        // TODO: 推送通知
+        return toAjax(announcementService.updateById(announcement));
+    }
+
+    /** 撤回 */
+    @PreAuthorize("@ss.hasPermi('com:announcement:publish')")
+    @PutMapping("/revoke/{announcementId}")
+    public AjaxResult revoke(@PathVariable Long announcementId) {
+        ComAnnouncement announcement = new ComAnnouncement();
+        announcement.setAnnouncementId(announcementId);
+        announcement.setStatus("已撤回");
+        announcement.setUpdateBy(getUsername());
         return toAjax(announcementService.updateById(announcement));
     }
 
@@ -90,5 +101,17 @@ public class ComAnnouncementController extends BaseController {
                 .eq(read.getAnnouncementId() != null, ComAnnouncementRead::getAnnouncementId, read.getAnnouncementId())
                 .page(page).getRecords();
         return getDataTable(list);
+    }
+
+    // ==================== 首页展示（所有登录用户可见） ====================
+    @GetMapping("/published")
+    public AjaxResult publishedList() {
+        List<ComAnnouncement> list = announcementService.lambdaQuery()
+                .eq(ComAnnouncement::getStatus, "已发布")
+                .and(qw -> qw.isNull(ComAnnouncement::getExpireDate).or().gt(ComAnnouncement::getExpireDate, new java.util.Date()))
+                .orderByDesc(ComAnnouncement::getPublishTime)
+                .last("limit 6")
+                .list();
+        return success(list);
     }
 }

@@ -25,6 +25,8 @@ public class ApplicationConfig
     @Bean
     public Jackson2ObjectMapperBuilderCustomizer jacksonObjectMapperCustomization()
     {
-        return jacksonObjectMapperBuilder -> jacksonObjectMapperBuilder.timeZone(TimeZone.getDefault());
+        return jacksonObjectMapperBuilder -> jacksonObjectMapperBuilder
+                .timeZone(TimeZone.getDefault())
+                .simpleDateFormat("yyyy-MM-dd HH:mm:ss");
     }
 }

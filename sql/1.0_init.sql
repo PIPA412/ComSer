@@ -1075,7 +1075,7 @@ INSERT INTO `sys_logininfor` VALUES (1,'admin','127.0.0.1','内网IP','Chrome','
 
 -- 14.1 用户管理（顶级菜单，order_num=0）
 INSERT INTO `sys_menu` VALUES
-(2, '用户管理', 0, 0, 'system/user', 'admin/user/index', NULL, '', 1, 0, 'C', '0', '0', 'admin:user:list',      'user',    'admin', NOW(), '', NULL, ''),
+(2, '用户管理', 0, 0, 'user', 'admin/user/index', NULL, '', 1, 0, 'C', '0', '0', 'admin:user:list',      'user',    'admin', NOW(), '', NULL, ''),
 (3, '用户查询', 2, 1, '',     NULL,                NULL, '', 1, 0, 'F', '0', '0', 'admin:user:query',    '#',       'admin', NOW(), '', NULL, ''),
 (4, '用户新增', 2, 2, '',     NULL,                NULL, '', 1, 0, 'F', '0', '0', 'admin:user:add',      '#',       'admin', NOW(), '', NULL, ''),
 (5, '用户修改', 2, 3, '',     NULL,                NULL, '', 1, 0, 'F', '0', '0', 'admin:user:edit',     '#',       'admin', NOW(), '', NULL, ''),
