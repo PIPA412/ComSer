@@ -1,5 +1,6 @@
 import request from '@/utils/request'
 
+// 公告CRUD
 export function listAnnouncement(query) {
   return request({ url: '/com/announcement/list', method: 'get', params: query })
 }
@@ -15,8 +16,18 @@ export function updateAnnouncement(data) {
 export function delAnnouncement(announcementIds) {
   return request({ url: '/com/announcement/' + announcementIds, method: 'delete' })
 }
+
+// 业务操作
 export function publishAnnouncement(announcementId) {
   return request({ url: '/com/announcement/publish/' + announcementId, method: 'put' })
+}
+export function revokeAnnouncement(announcementId) {
+  return request({ url: '/com/announcement/revoke/' + announcementId, method: 'put' })
+}
+
+// 首页已发布公告（所有登录用户可见）
+export function listPublishedAnnouncement() {
+  return request({ url: '/com/announcement/published', method: 'get' })
 }
 
 // 阅读记录
