@@ -1,0 +1,35 @@
+2026-07-12 15:59:16.930 [background-preinit] INFO  o.h.v.i.util.Version - [<clinit>,21] - HV000001: Hibernate Validator 8.0.3.Final
+2026-07-12 15:59:16.985 [restartedMain] INFO  c.zsc.ZscApplication - [logStarting,53] - Starting ZscApplication using Java 17.0.17 with PID 29544 (D:\Projects\ComSer\zsc_backend\zsc-admin\target\classes started by hfq in D:\Projects\ComSer)
+2026-07-12 15:59:16.986 [restartedMain] INFO  c.zsc.ZscApplication - [logStartupProfileInfo,658] - The following 1 profile is active: "druid"
+2026-07-12 15:59:20.380 [restartedMain] INFO  o.a.c.h.Http11NioProtocol - [log,168] - Initializing ProtocolHandler ["http-nio-8080"]
+2026-07-12 15:59:20.382 [restartedMain] INFO  o.a.c.c.StandardService - [log,168] - Starting service [Tomcat]
+2026-07-12 15:59:20.383 [restartedMain] INFO  o.a.c.c.StandardEngine - [log,168] - Starting Servlet engine: [Apache Tomcat/10.1.49]
+2026-07-12 15:59:20.510 [restartedMain] INFO  o.a.c.c.C.[.[.[/] - [log,168] - Initializing Spring embedded WebApplicationContext
+2026-07-12 15:59:22.014 [restartedMain] INFO  c.a.d.p.DruidDataSource - [init,865] - {dataSource-1} inited
+2026-07-12 15:59:25.676 [restartedMain] INFO  o.q.i.StdSchedulerFactory - [instantiate,1222] - Using default implementation for ThreadExecutor
+2026-07-12 15:59:25.700 [restartedMain] INFO  o.q.c.SchedulerSignalerImpl - [<init>,62] - Initialized Scheduler Signaller of type: class org.quartz.core.SchedulerSignalerImpl
+2026-07-12 15:59:25.701 [restartedMain] INFO  o.q.c.QuartzScheduler - [<init>,224] - Quartz Scheduler v2.5.2 created.
+2026-07-12 15:59:25.703 [restartedMain] INFO  o.q.s.RAMJobStore - [initialize,152] - RAMJobStore initialized.
+2026-07-12 15:59:25.704 [restartedMain] INFO  o.q.c.QuartzScheduler - [initialize,289] - Scheduler meta-data: Quartz Scheduler (v2.5.2) 'quartzScheduler' with instanceId 'NON_CLUSTERED'
+  Scheduler class: 'org.quartz.core.QuartzScheduler' - running locally.
+  NOT STARTED.
+  Currently in standby mode.
+  Number of jobs executed: 0
+  Using thread pool 'org.quartz.simpl.SimpleThreadPool' - with 10 threads.
+  Using job-store 'org.quartz.simpl.RAMJobStore' - which does not support persistence. and is not clustered.
+
+2026-07-12 15:59:25.705 [restartedMain] INFO  o.q.i.StdSchedulerFactory - [instantiate,1376] - Quartz scheduler 'quartzScheduler' initialized from an externally provided properties instance.
+2026-07-12 15:59:25.706 [restartedMain] INFO  o.q.i.StdSchedulerFactory - [instantiate,1378] - Quartz scheduler version: 2.5.2
+2026-07-12 15:59:25.707 [restartedMain] INFO  o.q.c.QuartzScheduler - [setJobFactory,2250] - JobFactory set to: org.springframework.scheduling.quartz.SpringBeanJobFactory@58ab44c
+2026-07-12 15:59:29.606 [restartedMain] INFO  o.a.c.h.Http11NioProtocol - [log,168] - Starting ProtocolHandler ["http-nio-8080"]
+2026-07-12 15:59:29.635 [restartedMain] INFO  o.q.c.QuartzScheduler - [start,541] - Scheduler quartzScheduler_$_NON_CLUSTERED started.
+2026-07-12 15:59:29.648 [restartedMain] INFO  c.zsc.ZscApplication - [logStarted,59] - Started ZscApplication in 13.451 seconds (process running for 15.095)
+2026-07-12 16:00:51.078 [http-nio-8080-exec-1] INFO  o.a.c.c.C.[.[.[/] - [log,168] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-07-12 16:01:11.389 [http-nio-8080-exec-2] INFO  c.z.f.w.s.UserDetailsServiceImpl - [loadUserByUsername,43] - 登录用户：admin123 不存在.
+2026-07-12 16:01:11.691 [schedule-pool-1] INFO  n.b.p.u.u.YauaaVersion - [logVersion,104] - Yauaa 7.32.0 (v7.32.0 @ 2025-10-11T16:29:46Z)
+2026-07-12 16:01:12.032 [schedule-pool-1] INFO  n.b.p.u.c.ConfigLoader - [loadResources,310] - - Loaded 119 files in  323 ms using expression: classpath*:UserAgents/**/*.yaml
+2026-07-12 16:01:14.404 [schedule-pool-1] INFO  n.b.p.u.a.UserAgentStringMatchMaker - [finalizeLoadingRules,282] - Building all needed matchers for the requested 11 fields.
+2026-07-12 16:01:14.507 [schedule-pool-1] INFO  n.b.p.u.a.UserAgentStringMatchMaker - [initializeMatchers,336] - Initializing Analyzer data structures
+2026-07-12 16:01:16.270 [http-nio-8080-exec-8] INFO  c.z.f.w.s.UserDetailsServiceImpl - [loadUserByUsername,43] - 登录用户：admin123 不存在.
+2026-07-12 16:01:16.449 [schedule-pool-1] INFO  n.b.p.u.a.UserAgentStringMatchMaker - [initializeMatchers,347] - Built in 1935 msec : Hashmap 197922, Ranges map:2964
+2026-07-12 16:01:30.510 [http-nio-8080-exec-14] INFO  c.z.f.w.s.UserDetailsServiceImpl - [loadUserByUsername,43] - 登录用户：admin123 不存在.
