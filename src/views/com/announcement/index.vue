@@ -51,12 +51,16 @@
         </template>
       </el-table-column>
       <el-table-column label="有效期至" prop="expireDate" width="110" />
+      <el-table-column label="阅读次数" align="center" width="80">
+        <template #default="scope">
+          <span>{{ readCountMap[scope.row.announcementId] ?? 0 }}</span>
+        </template>
+      </el-table-column>
       <el-table-column label="发布时间" prop="publishTime" width="160" />
-      <el-table-column label="创建时间" prop="createTime" width="160" />
       <el-table-column label="操作" align="center" width="300" class-name="small-padding fixed-width">
         <template #default="scope">
           <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)" v-hasPermi="['com:announcement:edit']">修改</el-button>
-          <el-button v-if="scope.row.status === '草稿'" link type="success" icon="Upload" @click="handlePublish(scope.row)" v-hasPermi="['com:announcement:publish']">发布</el-button>
+          <el-button v-if="scope.row.status === '草稿' || scope.row.status === '已撤回'" link type="success" icon="Upload" @click="handlePublish(scope.row)" v-hasPermi="['com:announcement:publish']">发布</el-button>
           <el-button v-if="scope.row.status === '已发布'" link type="warning" icon="Download" @click="handleRevoke(scope.row)" v-hasPermi="['com:announcement:publish']">撤回</el-button>
           <el-button link type="primary" icon="View" @click="handleViewReads(scope.row)" v-hasPermi="['com:announcement:read:list']">阅读</el-button>
           <el-button link type="danger" icon="Delete" @click="handleDelete(scope.row)" v-hasPermi="['com:announcement:remove']">删除</el-button>
@@ -111,7 +115,34 @@
           </el-col>
           <el-col :span="8">
             <el-form-item label="有效期至" prop="expireDate">
-              <el-date-picker v-model="form.expireDate" type="date" placeholder="选择日期" value-format="YYYY-MM-DD" style="width:100%" />
+              <el-date-picker
+                v-model="form.expireDate"
+                type="datetime"
+                placeholder="选择日期时间"
+                value-format="YYYY-MM-DD HH:mm:ss"
+                :disabled-date="disabledExpireDate"
+                style="width:100%"
+              />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="20" v-if="form.targetScope === '指定楼栋'">
+          <el-col :span="24">
+            <el-form-item label="目标楼栋" prop="targetBuildings">
+              <el-select
+                v-model="form.targetBuildings"
+                multiple
+                placeholder="请选择目标楼栋"
+                style="width:100%"
+                :loading="buildingLoading"
+              >
+                <el-option
+                  v-for="b in buildingList"
+                  :key="b.buildingId"
+                  :label="b.buildingName + ' (' + (b.units ? b.units.length : 0) + '个单元)'"
+                  :value="b.buildingId"
+                />
+              </el-select>
             </el-form-item>
           </el-col>
         </el-row>
@@ -132,18 +163,19 @@
       <template #footer>
         <div class="dialog-footer">
           <el-button type="primary" @click="submitForm">保 存</el-button>
-          <el-button type="success" v-if="form.announcementId && form.status === '草稿'" @click="submitAndPublish">保存并发布</el-button>
+          <el-button type="success" v-if="form.announcementId && (form.status === '草稿' || form.status === '已撤回')" @click="submitAndPublish">保存并发布</el-button>
           <el-button @click="cancel">取 消</el-button>
         </div>
       </template>
     </el-dialog>
 
     <!-- 阅读记录对话框 -->
-    <el-dialog title="阅读记录" v-model="readOpen" width="700px" append-to-body>
-      <el-table v-loading="readLoading" :data="readList">
-        <el-table-column label="用户ID" prop="userId" width="80" />
-        <el-table-column label="阅读时间" prop="readTime" width="180" />
-        <el-table-column label="创建时间" prop="createTime" width="180" />
+    <el-dialog title="阅读记录" v-model="readOpen" width="600px" append-to-body>
+      <el-table v-loading="readLoading" :data="readList" style="width:100%">
+        <el-table-column label="序号" type="index" width="60" align="center" />
+        <el-table-column label="用户ID" prop="userId" width="100" align="center" />
+        <el-table-column label="阅读时间" prop="readTime" min-width="180" align="center" />
+        <el-table-column label="创建时间" prop="createTime" min-width="180" align="center" />
       </el-table>
       <pagination v-show="readTotal > 0" :total="readTotal" v-model:page="readQuery.pageNum" v-model:limit="readQuery.pageSize" @pagination="getReadList" />
     </el-dialog>
@@ -151,13 +183,14 @@
 </template>
 
 <script setup name="AnnouncementManagement">
-import { listAnnouncement, getAnnouncement, addAnnouncement, updateAnnouncement, delAnnouncement, publishAnnouncement, revokeAnnouncement, listAnnouncementRead } from '@/api/com/announcement'
+import { listAnnouncement, getAnnouncement, addAnnouncement, updateAnnouncement, delAnnouncement, publishAnnouncement, revokeAnnouncement, listAnnouncementRead, getScopeBuildings, batchReadCount } from '@/api/com/announcement'
 import Editor from '@/components/Editor'
-import { getCurrentInstance, ref, reactive, toRefs } from 'vue'
+import { getCurrentInstance, ref, reactive, toRefs, watch } from 'vue'
 
 const { proxy } = getCurrentInstance()
 
 const announcementList = ref([])
+const readCountMap = ref({})
 const open = ref(false)
 const loading = ref(true)
 const showSearch = ref(true)
@@ -171,11 +204,59 @@ const data = reactive({
   rules: {
     title: [{ required: true, message: '公告标题不能为空', trigger: 'blur' }],
     content: [{ required: true, message: '公告内容不能为空', trigger: 'blur' }],
-    category: [{ required: true, message: '请选择分类', trigger: 'change' }]
+    category: [{ required: true, message: '请选择分类', trigger: 'change' }],
+    expireDate: [
+      {
+        validator: (rule, value, callback) => {
+          if (value && new Date(value).getTime() <= Date.now()) {
+            callback(new Error('有效期必须晚于当前时间'))
+          } else {
+            callback()
+          }
+        },
+        trigger: 'change'
+      }
+    ],
+    targetBuildings: [
+      {
+        validator: (rule, value, callback) => {
+          if (form.value.targetScope === '指定楼栋' && (!value || value.length === 0)) {
+            callback(new Error('请选择目标楼栋'))
+          } else {
+            callback()
+          }
+        },
+        trigger: 'change'
+      }
+    ]
   }
 })
 
 const { queryParams, form, rules } = toRefs(data)
+
+// 楼栋列表（用于指定楼栋选择）
+const buildingList = ref([])
+const buildingLoading = ref(false)
+
+// 监听发布范围变化，加载楼栋数据
+watch(() => form.value.targetScope, (newVal) => {
+  if (newVal === '指定楼栋' && buildingList.value.length === 0) {
+    loadBuildingList()
+  }
+})
+
+function loadBuildingList() {
+  buildingLoading.value = true
+  getScopeBuildings().then(response => {
+    buildingList.value = response.data || []
+    buildingLoading.value = false
+  }).catch(() => { buildingLoading.value = false })
+}
+
+// 日期选择器：不允许选择今天之前的日期
+function disabledExpireDate(time) {
+  return time.getTime() < Date.now() - 8.64e7 // 允许选择今天
+}
 
 // 阅读记录
 const readOpen = ref(false)
@@ -196,6 +277,13 @@ function getList() {
     announcementList.value = response.rows
     total.value = response.total
     loading.value = false
+    // 批量获取阅读次数
+    if (response.rows && response.rows.length > 0) {
+      const ids = response.rows.map(r => r.announcementId).join(',')
+      batchReadCount(ids).then(res => {
+        readCountMap.value = res.data || {}
+      }).catch(() => {})
+    }
   }).catch(() => { loading.value = false })
 }
 
@@ -302,6 +390,10 @@ function prepareData(data) {
   if (Array.isArray(data.targetGroups)) {
     data.targetGroups = data.targetGroups.join(',')
   }
+  // 指定楼栋：将楼栋ID数组序列化为JSON字符串存储
+  if (Array.isArray(data.targetBuildings)) {
+    data.targetBuildings = JSON.stringify(data.targetBuildings)
+  }
   return data
 }
 
@@ -313,6 +405,21 @@ function fillForm(data) {
   }
   if (typeof form.value.targetGroups === 'string') {
     form.value.targetGroups = form.value.targetGroups.split(',').filter(Boolean)
+  }
+  // 解析targetBuildings JSON数组
+  if (typeof form.value.targetBuildings === 'string' && form.value.targetBuildings) {
+    try {
+      form.value.targetBuildings = JSON.parse(form.value.targetBuildings)
+    } catch (e) {
+      form.value.targetBuildings = []
+    }
+  }
+  if (!form.value.targetBuildings) {
+    form.value.targetBuildings = []
+  }
+  // 加载楼栋列表供选择
+  if (form.value.targetScope === '指定楼栋') {
+    loadBuildingList()
   }
 }
 
@@ -330,6 +437,7 @@ function reset() {
     targetScope: '全部',
     pushMethod: [],
     targetGroups: [],
+    targetBuildings: [],
     expireDate: undefined,
     remark: undefined
   }

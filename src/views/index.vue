@@ -47,7 +47,7 @@
 </template>
 
 <script setup name="Index">
-import { listPublishedAnnouncement } from '@/api/com/announcement'
+import { listPublishedAnnouncement, recordRead } from '@/api/com/announcement'
 import { ref, onMounted } from 'vue'
 
 const announcements = ref([])
@@ -69,6 +69,8 @@ function truncateContent(html, maxLen) {
 function showDetail(item) {
   current.value = item
   detailOpen.value = true
+  // 记录阅读统计
+  recordRead(item.announcementId).catch(() => {})
 }
 
 onMounted(() => {

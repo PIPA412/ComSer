@@ -38,19 +38,20 @@
       <el-table-column label="被访房屋" prop="roomId" width="100" />
       <el-table-column label="来访事由" prop="reason" :show-overflow-tooltip="true" />
       <el-table-column label="预计到访" prop="expectedTime" width="160" />
-      <el-table-column label="到访时间" prop="arrivalTime" width="160" />
+      <el-table-column label="审核时间" prop="arrivalTime" width="160" />
       <el-table-column label="签离时间" prop="leaveTime" width="160" />
       <el-table-column label="状态" align="center" width="90">
         <template #default="scope">
           <el-tag :type="statusTagType(scope.row.status)">{{ scope.row.status }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" align="center" width="320" class-name="small-padding fixed-width">
+      <el-table-column label="操作" align="center" width="380" class-name="small-padding fixed-width">
         <template #default="scope">
           <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)" v-hasPermi="['com:visitor:edit']">修改</el-button>
           <el-button v-if="scope.row.status === '待审批'" link type="success" icon="Check" @click="handleApprove(scope.row)" v-hasPermi="['com:visitor:approve']">通过</el-button>
           <el-button v-if="scope.row.status === '待审批'" link type="danger" icon="Close" @click="handleReject(scope.row)" v-hasPermi="['com:visitor:approve']">拒绝</el-button>
           <el-button v-if="scope.row.status === '已通过'" link type="success" icon="CircleCheck" @click="handleCheckout(scope.row)" v-hasPermi="['com:visitor:checkout']">签离</el-button>
+          <el-button v-if="scope.row.status === '已通过'" link type="warning" icon="Camera" @click="handleQrCode(scope.row)" v-hasPermi="['com:visitor:query']">二维码</el-button>
           <el-button link type="primary" icon="View" @click="handleViewRecords(scope.row)" v-hasPermi="['com:visitor:record:list']">记录</el-button>
           <el-button link type="danger" icon="Delete" @click="handleDelete(scope.row)" v-hasPermi="['com:visitor:remove']">删除</el-button>
         </template>
@@ -109,6 +110,25 @@
       </template>
     </el-dialog>
 
+    <!-- 二维码弹窗 -->
+    <el-dialog title="通行二维码" v-model="qrOpen" width="420px" append-to-body center :close-on-click-modal="false">
+      <div style="text-align:center;min-height:120px">
+        <template v-if="qrImage">
+          <img :src="qrImage" alt="通行二维码" style="width:280px;height:280px" />
+          <div style="margin-top:8px;color:#606266;font-size:13px">
+            <p style="margin:4px 0">访客：<b>{{ qrVisitorName }}</b></p>
+            <p style="margin:4px 0;color:#909399;font-size:12px">有效期24小时，过期请重新审批</p>
+          </div>
+        </template>
+        <template v-else-if="qrError">
+          <p style="color:#f56c6c">{{ qrError }}</p>
+        </template>
+        <template v-else>
+          <p style="color:#909399">加载中...</p>
+        </template>
+      </div>
+    </el-dialog>
+
     <!-- 通行记录子表 -->
     <el-dialog title="通行记录" v-model="recordOpen" width="800px" append-to-body>
       <el-table v-loading="recordLoading" :data="recordList">
@@ -127,7 +147,7 @@
 </template>
 
 <script setup name="VisitorManagement">
-import { listVisitor, getVisitor, addVisitor, updateVisitor, delVisitor, approveVisitor, rejectVisitor, checkoutVisitor, listVisitorRecord } from '@/api/com/visitor'
+import { listVisitor, getVisitor, addVisitor, updateVisitor, delVisitor, approveVisitor, rejectVisitor, checkoutVisitor, listVisitorRecord, getVisitorQrCode } from '@/api/com/visitor'
 import { getCurrentInstance, ref, reactive, toRefs } from 'vue'
 
 const { proxy } = getCurrentInstance()
@@ -174,6 +194,12 @@ const recordList = ref([])
 const recordTotal = ref(0)
 const currentVisitorId = ref(null)
 const recordQuery = ref({ pageNum: 1, pageSize: 10 })
+
+// 二维码
+const qrOpen = ref(false)
+const qrImage = ref('')
+const qrError = ref('')
+const qrVisitorName = ref('')
 
 function statusTagType(status) {
   const map = { '待审批': 'warning', '已通过': 'success', '已拒绝': 'danger', '已签离': 'info' }
@@ -290,6 +316,19 @@ function reset() {
     remark: undefined
   }
   proxy.resetForm('visitorRef')
+}
+
+function handleQrCode(row) {
+  qrVisitorName.value = row.visitorName
+  qrImage.value = ''
+  qrError.value = ''
+  qrOpen.value = true
+
+  getVisitorQrCode(row.visitorId).then(response => {
+    qrImage.value = response.data
+  }).catch(() => {
+    qrError.value = '获取失败'
+  })
 }
 
 function handleViewRecords(row) {

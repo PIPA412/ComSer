@@ -32,3 +32,8 @@ export function checkoutVisitor(visitorId) {
 export function listVisitorRecord(query) {
   return request({ url: '/com/visitor/record/list', method: 'get', params: query })
 }
+
+// 获取访客通行二维码
+export function getVisitorQrCode(visitorId) {
+  return request({ url: '/com/visitor/qrcode/' + visitorId, method: 'get' })
+}
