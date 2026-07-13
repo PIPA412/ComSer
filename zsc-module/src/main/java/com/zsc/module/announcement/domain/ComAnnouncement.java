@@ -2,6 +2,7 @@ package com.zsc.module.announcement.domain;
 
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.zsc.common.core.domain.BaseEntity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -45,11 +46,13 @@ public class ComAnnouncement extends BaseEntity {
     private String pushMethod;
 
     /** 有效期截止 */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date expireDate;
 
     /** 状态（草稿/已发布/已撤回） */
     private String status;
 
     /** 发布时间 */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date publishTime;
 }

@@ -45,7 +45,12 @@ public class ComVisitorController extends BaseController {
         }
         qw.orderByDesc(ComVisitor::getCreateTime);
         visitorService.page(page, qw);
-        return getDataTable(page.getRecords());
+        TableDataInfo rsp = new TableDataInfo();
+        rsp.setCode(com.zsc.common.constant.HttpStatus.SUCCESS);
+        rsp.setMsg("查询成功");
+        rsp.setRows(page.getRecords());
+        rsp.setTotal(page.getTotal());
+        return rsp;
     }
 
     @PreAuthorize("@ss.hasPermi('com:visitor:query')")
@@ -63,8 +68,8 @@ public class ComVisitorController extends BaseController {
     @PostMapping
     public AjaxResult add(@RequestBody ComVisitor visitor) {
         visitor.setCreateBy(getUsername());
-        // 非管理员自动绑定当前用户为邀请人
-        if (!SecurityUtils.hasPermi("com:visitor:approve")) {
+        // 管理员未指定邀请人时默认绑定自己
+        if (visitor.getInviterId() == null) {
             visitor.setInviterId(SecurityUtils.getUserId());
         }
         visitorService.save(visitor);
@@ -76,29 +81,45 @@ public class ComVisitorController extends BaseController {
     @PutMapping
     public AjaxResult edit(@RequestBody ComVisitor visitor) {
         ComVisitor existing = visitorService.getById(visitor.getVisitorId());
-        if (existing != null && !SecurityUtils.hasPermi("com:visitor:approve")
-                && !SecurityUtils.getUserId().equals(existing.getInviterId())) {
-            return error("无权修改该访客信息");
+        if (existing == null) {
+            return error("访客记录不存在");
+        }
+        // 非管理员只能修改自己的访客记录，且不能修改状态/二维码/邀请人
+        if (!SecurityUtils.hasPermi("com:visitor:approve")) {
+            if (!SecurityUtils.getUserId().equals(existing.getInviterId())) {
+                return error("无权修改该访客信息");
+            }
+            // 非管理员禁止修改特权字段
+            visitor.setStatus(null);
+            visitor.setQrCode(null);
+            visitor.setInviterId(null);
         }
         visitor.setUpdateBy(getUsername());
         return toAjax(visitorService.updateById(visitor));
     }
 
-    /** 审批通过 */
+    /** 审批通过（生成通行二维码） */
     @PreAuthorize("@ss.hasPermi('com:visitor:approve')")
     @PutMapping("/approve/{visitorId}")
     public AjaxResult approve(@PathVariable Long visitorId) {
-        ComVisitor visitor = new ComVisitor();
-        visitor.setVisitorId(visitorId);
-        visitor.setStatus("已通过");
-        visitor.setUpdateBy(getUsername());
-        return toAjax(visitorService.updateById(visitor));
+        ComVisitor result = visitorService.approveWithQrCode(visitorId, getUsername());
+        if (result == null) {
+            return error("访客不存在或当前状态不允许审批");
+        }
+        return success();
     }
 
     /** 审批拒绝 */
     @PreAuthorize("@ss.hasPermi('com:visitor:approve')")
     @PutMapping("/reject/{visitorId}")
     public AjaxResult reject(@PathVariable Long visitorId) {
+        ComVisitor exist = visitorService.getById(visitorId);
+        if (exist == null) {
+            return error("访客不存在");
+        }
+        if (!"待审批".equals(exist.getStatus())) {
+            return error("仅待审批状态的访客可以拒绝");
+        }
         ComVisitor visitor = new ComVisitor();
         visitor.setVisitorId(visitorId);
         visitor.setStatus("已拒绝");
@@ -110,6 +131,13 @@ public class ComVisitorController extends BaseController {
     @PreAuthorize("@ss.hasPermi('com:visitor:checkout')")
     @PutMapping("/checkout/{visitorId}")
     public AjaxResult checkout(@PathVariable Long visitorId) {
+        ComVisitor exist = visitorService.getById(visitorId);
+        if (exist == null) {
+            return error("访客不存在");
+        }
+        if (!"已通过".equals(exist.getStatus())) {
+            return error("仅已通过状态的访客可以签离");
+        }
         ComVisitor visitor = new ComVisitor();
         visitor.setVisitorId(visitorId);
         visitor.setStatus("已签离");
@@ -124,15 +152,32 @@ public class ComVisitorController extends BaseController {
         return toAjax(visitorService.removeByIds(java.util.Arrays.asList(visitorIds)));
     }
 
+    /** 获取访客通行二维码（Base64 图片） */
+    @PreAuthorize("@ss.hasPermi('com:visitor:query')")
+    @GetMapping("/qrcode/{visitorId}")
+    public AjaxResult getQrCode(@PathVariable Long visitorId) {
+        String base64 = visitorService.getQrCodeBase64(visitorId);
+        if (base64 == null) {
+            return error("访客不存在或尚未生成通行二维码");
+        }
+        // 使用显式两参数形式，避免 AjaxResult.success(String) 重载把 base64 当成 msg
+        return AjaxResult.success("操作成功", base64);
+    }
+
     // ==================== 通行记录 ====================
     @PreAuthorize("@ss.hasPermi('com:visitor:record:list')")
     @GetMapping("/record/list")
     public TableDataInfo recordList(ComVisitorRecord record) {
         Page<ComVisitorRecord> page = startPage();
-        List<ComVisitorRecord> list = visitorRecordService.lambdaQuery()
+        visitorRecordService.lambdaQuery()
                 .eq(record.getVisitorId() != null, ComVisitorRecord::getVisitorId, record.getVisitorId())
                 .orderByDesc(ComVisitorRecord::getPassTime)
-                .page(page).getRecords();
-        return getDataTable(list);
+                .page(page);
+        TableDataInfo rsp = new TableDataInfo();
+        rsp.setCode(com.zsc.common.constant.HttpStatus.SUCCESS);
+        rsp.setMsg("查询成功");
+        rsp.setRows(page.getRecords());
+        rsp.setTotal(page.getTotal());
+        return rsp;
     }
 }

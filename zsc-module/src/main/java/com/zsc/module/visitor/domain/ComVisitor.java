@@ -42,6 +42,7 @@ public class ComVisitor extends BaseEntity {
     private String reason;
 
     /** 通行二维码 */
+    @com.baomidou.mybatisplus.annotation.TableField("qr_code")
     private String qrCode;
 
     /** 状态（待审批/已通过/已拒绝/已签离） */
