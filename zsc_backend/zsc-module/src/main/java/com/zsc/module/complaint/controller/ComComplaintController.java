@@ -75,6 +75,7 @@ public class ComComplaintController extends BaseController {
     @PutMapping("/accept")
     public AjaxResult accept(@RequestBody ComComplaint complaint) {
         complaint.setUpdateBy(getUsername());
+        complaint.setHandlerId(getUserId());
         complaint.setStatus("处理中");
         complaint.setAcceptTime(new java.util.Date());
         return toAjax(complaintService.updateById(complaint));

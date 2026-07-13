@@ -6,6 +6,7 @@ import com.zsc.common.core.domain.BaseEntity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import java.util.Date;
 
 /**
@@ -45,9 +46,11 @@ public class ComComplaint extends BaseEntity {
     private Long handlerId;
 
     /** 受理时间 */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date acceptTime;
 
     /** 完成时间 */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date finishTime;
 
     /** 满意度评价（1-5） */
