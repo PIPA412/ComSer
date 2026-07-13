@@ -27,6 +27,20 @@ import Layout from '@/layout'
 // 公共路由
 export const constantRoutes = [
   {
+    path: '/portal',
+    component: () => import('@/views/com/portal/index.vue'),
+    name: 'Portal',
+    hidden: true,
+    meta: { title: '周边商家', noCache: true }
+  },
+  {
+    path: '/portal',
+    component: () => import('@/views/com/portal/index.vue'),
+    name: 'Portal',
+    hidden: true,
+    meta: { title: '居民端商家展示', noCache: true }
+  },
+  {
     path: '/redirect',
     component: Layout,
     hidden: true,
@@ -83,7 +97,7 @@ export const constantRoutes = [
         meta: { title: '个人中心', icon: 'user' }
       }
     ]
-  }
+  },
 ]
 
 // 动态路由，基于用户权限动态去加载
