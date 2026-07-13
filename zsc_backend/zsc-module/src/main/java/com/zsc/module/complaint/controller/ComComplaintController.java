@@ -91,6 +91,18 @@ public class ComComplaintController extends BaseController {
         return toAjax(complaintService.updateById(complaint));
     }
 
+    /** 满意度评价（居民端） */
+    @PutMapping("/rate")
+    public AjaxResult rate(@RequestBody ComComplaint complaint) {
+        ComComplaint db = complaintService.getById(complaint.getComplaintId());
+        if (db == null) return error("记录不存在");
+        if (!"已完成".equals(db.getStatus())) return error("仅可评价已完成的投诉/建议");
+        if (db.getRating() != null) return error("已评价，不可重复评价");
+        db.setRating(complaint.getRating());
+        db.setUpdateBy(getUsername());
+        return toAjax(complaintService.updateById(db));
+    }
+
     @PreAuthorize("@ss.hasPermi('com:complaint:remove')")
     @DeleteMapping("/{complaintIds}")
     public AjaxResult remove(@PathVariable Long[] complaintIds) {

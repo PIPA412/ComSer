@@ -43,6 +43,18 @@
           </template>
         </el-table-column>
         <el-table-column label="提交时间" prop="createTime" width="170" />
+        <el-table-column label="满意度" width="150">
+          <template #default="scope">
+            <el-rate
+              v-if="scope.row.status === '已完成'"
+              v-model="scope.row.rating"
+              :max="5"
+              :disabled="!!scope.row.rating"
+              @change="(val) => handleRate(scope.row, val)"
+            />
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
         <el-table-column label="处理反馈" prop="remark" show-overflow-tooltip />
       </el-table>
       <pagination v-show="total > 0" :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize" @pagination="getList" />
@@ -54,7 +66,7 @@
 import { ref, reactive, getCurrentInstance } from 'vue'
 import { ElMessage } from 'element-plus'
 import { ChatLineSquare, List, Promotion } from '@element-plus/icons-vue'
-import { addComplaint, listMyComplaint } from '@/api/com/complaint'
+import { addComplaint, listMyComplaint, rateComplaint } from '@/api/com/complaint'
 
 const { proxy } = getCurrentInstance()
 
@@ -103,6 +115,12 @@ async function handleSubmit() {
       getList()
     } finally { submitting.value = false }
   })
+}
+
+async function handleRate(row, val) {
+  await rateComplaint({ complaintId: row.complaintId, rating: val })
+  ElMessage.success('评价成功')
+  getList()
 }
 
 function resetForm() {
