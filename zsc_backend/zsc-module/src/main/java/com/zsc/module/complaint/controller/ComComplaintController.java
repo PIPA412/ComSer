@@ -52,8 +52,22 @@ public class ComComplaintController extends BaseController {
     @PostMapping
     public AjaxResult add(@RequestBody ComComplaint complaint) {
         complaint.setCreateBy(getUsername());
+        complaint.setUserId(getUserId());
+        complaint.setCreateTime(new java.util.Date());
         complaint.setStatus("待受理");
         return toAjax(complaintService.save(complaint));
+    }
+
+    /** 查询当前用户的投诉/建议列表（居民端） */
+    @GetMapping("/my")
+    public TableDataInfo myList(ComComplaint complaint) {
+        Page<ComComplaint> page = startPage();
+        List<ComComplaint> list = complaintService.lambdaQuery()
+                .eq(complaint.getType() != null, ComComplaint::getType, complaint.getType())
+                .eq(ComComplaint::getUserId, getUserId())
+                .orderByDesc(ComComplaint::getCreateTime)
+                .page(page).getRecords();
+        return getDataTable(list);
     }
 
     /** 受理 */

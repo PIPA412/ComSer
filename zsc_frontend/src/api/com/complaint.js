@@ -19,6 +19,11 @@ export function finishComplaint(data) {
   return request({ url: '/com/complaint/finish', method: 'put', data })
 }
 
+// 当前用户的投诉/建议
+export function listMyComplaint(query) {
+  return request({ url: '/com/complaint/my', method: 'get', params: query })
+}
+
 // 处理反馈
 export function listComplaintFeedback(query) {
   return request({ url: '/com/complaint/feedback/list', method: 'get', params: query })
