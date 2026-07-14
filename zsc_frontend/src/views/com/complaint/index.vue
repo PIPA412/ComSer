@@ -30,6 +30,28 @@
       <right-toolbar v-model:showSearch="showSearch" @queryTable="getList" />
     </el-row>
 
+    <!-- 督办统计 -->
+    <el-row :gutter="16" class="mb8">
+      <el-col :span="6">
+        <el-statistic title="处理中" :value="statsData.totalProcessing || 0" />
+      </el-col>
+      <el-col :span="6">
+        <el-statistic title="黄牌预警" :value="statsData.yellowCount || 0">
+          <template #suffix><el-tag type="warning" size="small">时限过半</el-tag></template>
+        </el-statistic>
+      </el-col>
+      <el-col :span="6">
+        <el-statistic title="红牌督办" :value="statsData.redCount || 0">
+          <template #suffix><el-tag type="danger" size="small">已超时</el-tag></template>
+        </el-statistic>
+      </el-col>
+      <el-col :span="6">
+        <el-statistic title="重开工单" :value="reopenedCount || 0">
+          <template #suffix><el-tag type="danger" effect="dark" size="small">不满意重开</el-tag></template>
+        </el-statistic>
+      </el-col>
+    </el-row>
+
     <el-table v-loading="loading" :data="complaintList">
       <el-table-column label="类型" prop="type" width="80">
         <template #default="scope">
@@ -45,6 +67,15 @@
       <el-table-column label="分类" prop="category" width="90" />
       <el-table-column label="标题" prop="title" show-overflow-tooltip />
       <el-table-column label="提交人" prop="createBy" width="100" />
+      <el-table-column label="预警" prop="warnStatus" width="140">
+        <template #default="scope">
+          <el-tag v-if="scope.row.warnStatus === '正常'" type="success" size="small">正常</el-tag>
+          <el-tag v-else-if="scope.row.warnStatus === '不满意重开'" type="danger" effect="dark" size="small">不满意重开</el-tag>
+          <el-tag v-else-if="scope.row.warnStatus?.startsWith('黄牌')" type="warning" size="small">黄牌预警</el-tag>
+          <el-tag v-else-if="scope.row.warnStatus?.startsWith('红牌')" type="danger" size="small">红牌督办</el-tag>
+          <span v-else style="color:#909399">-</span>
+        </template>
+      </el-table-column>
       <el-table-column label="状态" prop="status" width="100">
         <template #default="scope">
           <el-tag :type="statusTag(scope.row.status)">{{ scope.row.status }}</el-tag>
@@ -138,7 +169,7 @@
 <script setup name="ComplaintManage">
 import { ref, reactive, getCurrentInstance } from 'vue'
 import { ElMessage } from 'element-plus'
-import { listComplaint, delComplaint, acceptComplaint, finishComplaint, listComplaintFeedback, addComplaintFeedback } from '@/api/com/complaint'
+import { listComplaint, delComplaint, acceptComplaint, finishComplaint, listComplaintFeedback, addComplaintFeedback, complaintStatistics } from '@/api/com/complaint'
 
 const { proxy } = getCurrentInstance()
 
@@ -148,6 +179,8 @@ const showSearch = ref(true)
 const total = ref(0)
 const complaintList = ref([])
 const queryParams = reactive({ pageNum: 1, pageSize: 10, type: null, urgency: null, status: null })
+const statsData = reactive({ totalProcessing: 0, yellowCount: 0, redCount: 0 })
+const reopenedCount = ref(0)
 
 function statusTag(status) {
   return { '待受理': 'warning', '处理中': 'primary', '已完成': 'success' }[status] || 'info'
@@ -159,7 +192,16 @@ async function getList() {
     const res = await listComplaint(queryParams)
     complaintList.value = res.rows
     total.value = res.total
+    reopenedCount.value = res.rows.filter(r => r.reopened === 1).length
   } finally { loading.value = false }
+  loadStats()
+}
+
+async function loadStats() {
+  try {
+    const res = await complaintStatistics()
+    Object.assign(statsData, res.data)
+  } catch { /* ignore */ }
 }
 
 function handleQuery() { queryParams.pageNum = 1; getList() }

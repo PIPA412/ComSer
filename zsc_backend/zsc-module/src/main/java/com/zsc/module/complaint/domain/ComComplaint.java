@@ -1,5 +1,6 @@
 package com.zsc.module.complaint.domain;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.zsc.common.core.domain.BaseEntity;
@@ -59,6 +60,17 @@ public class ComComplaint extends BaseEntity {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date finishTime;
 
+    /** 处理截止时间 */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private Date deadline;
+
     /** 满意度评价（1-5） */
     private Integer rating;
+
+    /** 是否被重开 */
+    private Integer reopened;
+
+    /** 预警状态（query-only，非DB字段） */
+    @TableField(exist = false)
+    private String warnStatus;
 }

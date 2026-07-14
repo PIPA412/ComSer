@@ -10,7 +10,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 投诉与建议管理 Controller
@@ -42,6 +43,8 @@ public class ComComplaintController extends BaseController {
                 .orderByDesc(ComComplaint::getUrgency)
                 .orderByDesc(ComComplaint::getCreateTime)
                 .page(page).getRecords();
+        // 计算预警
+        list.forEach(this::calcWarn);
         return getDataTable(list);
     }
 
@@ -81,6 +84,10 @@ public class ComComplaintController extends BaseController {
         complaint.setHandlerId(getUserId());
         complaint.setStatus("处理中");
         complaint.setAcceptTime(new java.util.Date());
+        // 48小时处理时限
+        Calendar cal = Calendar.getInstance();
+        cal.add(Calendar.HOUR, 48);
+        complaint.setDeadline(cal.getTime());
         return toAjax(complaintService.updateById(complaint));
     }
 
@@ -100,9 +107,18 @@ public class ComComplaintController extends BaseController {
         ComComplaint db = complaintService.getById(complaint.getComplaintId());
         if (db == null) return error("记录不存在");
         if (!"已完成".equals(db.getStatus())) return error("仅可评价已完成的投诉/建议");
-        if (db.getRating() != null) return error("已评价，不可重复评价");
+        if (db.getRating() != null && db.getReopened() == null) return error("已评价，不可重复评价");
         db.setRating(complaint.getRating());
         db.setUpdateBy(getUsername());
+        // 1-2分 → 重开工单，24h重新处理
+        if (complaint.getRating() != null && complaint.getRating() <= 2) {
+            db.setStatus("处理中");
+            db.setReopened(1);
+            db.setFinishTime(null);
+            Calendar cal = Calendar.getInstance();
+            cal.add(Calendar.HOUR, 24);
+            db.setDeadline(cal.getTime());
+        }
         return toAjax(complaintService.updateById(db));
     }
 
@@ -130,5 +146,55 @@ public class ComComplaintController extends BaseController {
         feedback.setCreateBy(getUsername());
         feedback.setCreateTime(new java.util.Date());
         return toAjax(feedbackService.save(feedback));
+    }
+
+    // ==================== 超时统计 ====================
+    @PreAuthorize("@ss.hasPermi('com:complaint:list')")
+    @GetMapping("/statistics")
+    public AjaxResult statistics() {
+        List<ComComplaint> all = complaintService.lambdaQuery()
+                .eq(ComComplaint::getStatus, "处理中")
+                .list();
+        Date now = new Date();
+        long yellow = all.stream().filter(c -> c.getDeadline() != null && isYellow(c.getDeadline(), now)).count();
+        long red = all.stream().filter(c -> c.getDeadline() != null && c.getDeadline().before(now)).count();
+
+        // 按处理人统计
+        Map<Long, Long> byHandler = all.stream()
+                .filter(c -> c.getHandlerId() != null && c.getDeadline() != null && c.getDeadline().before(now))
+                .collect(Collectors.groupingBy(ComComplaint::getHandlerId, Collectors.counting()));
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("yellowCount", yellow);
+        result.put("redCount", red);
+        result.put("totalProcessing", all.size());
+        result.put("overtimeByHandler", byHandler);
+        return success(result);
+    }
+
+    // ==================== 预警工具 ====================
+    private void calcWarn(ComComplaint c) {
+        if (!"处理中".equals(c.getStatus()) || c.getDeadline() == null) return;
+        if (c.getReopened() != null && c.getReopened() == 1) {
+            c.setWarnStatus("不满意重开");
+            return;
+        }
+        Date now = new Date();
+        if (c.getDeadline().before(now)) {
+            c.setWarnStatus("红牌-超时未完成");
+        } else if (isYellow(c.getDeadline(), now)) {
+            c.setWarnStatus("黄牌-时限过半");
+        } else {
+            c.setWarnStatus("正常");
+        }
+    }
+
+    private boolean isYellow(Date deadline, Date now) {
+        if (deadline == null) return false;
+        long total = deadline.getTime() - (deadline.getTime() - 48L * 3600 * 1000);
+        // 简化：计算已过去的时间是否超过总时限的一半
+        long start = deadline.getTime() - 48L * 3600 * 1000;
+        long elapsed = now.getTime() - start;
+        return elapsed > 24L * 3600 * 1000; // 超过24小时（48小时的一半）
     }
 }

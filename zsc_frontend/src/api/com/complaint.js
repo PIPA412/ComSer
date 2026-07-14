@@ -24,6 +24,11 @@ export function rateComplaint(data) {
   return request({ url: '/com/complaint/rate', method: 'put', data })
 }
 
+// 超时统计
+export function complaintStatistics() {
+  return request({ url: '/com/complaint/statistics', method: 'get' })
+}
+
 // 当前用户的投诉/建议
 export function listMyComplaint(query) {
   return request({ url: '/com/complaint/my', method: 'get', params: query })
