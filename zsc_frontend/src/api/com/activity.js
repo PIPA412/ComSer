@@ -35,3 +35,12 @@ export function mySignups() {
 export function signin(signupId) {
   return request({ url: '/com/activity/signin/' + signupId, method: 'put' })
 }
+export function batchApproveSignup(ids) {
+  return request({ url: '/com/activity/signup/approve', method: 'put', data: { ids } })
+}
+export function batchRejectSignup(ids, reason) {
+  return request({ url: '/com/activity/signup/reject', method: 'put', data: { ids, reason } })
+}
+export function exportSignupUrl(activityId) {
+  return import.meta.env.VITE_APP_BASE_API + '/com/activity/signup/export/' + activityId
+}

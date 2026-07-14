@@ -10,7 +10,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.net.URLEncoder;
+import java.util.*;
+import java.util.stream.Collectors;
+import jakarta.servlet.http.HttpServletResponse;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 /**
  * 社区活动管理 Controller
@@ -186,6 +193,66 @@ public class ComActivityController extends BaseController {
                 .orderByDesc(ComActivitySignup::getCreateTime)
                 .list();
         return success(list);
+    }
+
+    // ==================== 报名审核 ====================
+    /** 批量通过 */
+    @PreAuthorize("@ss.hasPermi('com:activity:signup:list')")
+    @PutMapping("/signup/approve")
+    public AjaxResult batchApprove(@RequestBody Map<String, Object> body) {
+        @SuppressWarnings("unchecked")
+        List<Integer> ids = (List<Integer>) body.get("ids");
+        if (ids == null || ids.isEmpty()) return error("请选择记录");
+        List<ComActivitySignup> list = signupService.listByIds(ids.stream().map(Long::valueOf).collect(Collectors.toList()));
+        list.forEach(s -> s.setStatus("已通过"));
+        signupService.updateBatchById(list);
+        return success("已通过 " + list.size() + " 条");
+    }
+
+    /** 批量拒绝 */
+    @PreAuthorize("@ss.hasPermi('com:activity:signup:list')")
+    @PutMapping("/signup/reject")
+    public AjaxResult batchReject(@RequestBody Map<String, Object> body) {
+        @SuppressWarnings("unchecked")
+        List<Integer> ids = (List<Integer>) body.get("ids");
+        String reason = (String) body.get("reason");
+        if (ids == null || ids.isEmpty()) return error("请选择记录");
+        if (reason == null || reason.trim().isEmpty()) return error("请填写拒绝原因");
+        List<ComActivitySignup> list = signupService.listByIds(ids.stream().map(Long::valueOf).collect(Collectors.toList()));
+        list.forEach(s -> { s.setStatus("已拒绝"); s.setRejectReason(reason); });
+        signupService.updateBatchById(list);
+        return success("已拒绝 " + list.size() + " 条");
+    }
+
+    /** 导出报名名单Excel */
+    @PreAuthorize("@ss.hasPermi('com:activity:signup:list')")
+    @GetMapping("/signup/export/{activityId}")
+    public void exportSignup(@PathVariable Long activityId, HttpServletResponse response) throws IOException {
+        List<ComActivitySignup> list = signupService.lambdaQuery()
+                .eq(ComActivitySignup::getActivityId, activityId)
+                .orderByAsc(ComActivitySignup::getCreateTime).list();
+
+        Workbook wb = new XSSFWorkbook();
+        Sheet sheet = wb.createSheet("报名名单");
+        Row header = sheet.createRow(0);
+        String[] titles = {"序号","报名人","状态","报名时间","签到时间","拒绝原因"};
+        for (int i = 0; i < titles.length; i++) header.createCell(i).setCellValue(titles[i]);
+
+        int rowIdx = 1;
+        for (ComActivitySignup s : list) {
+            Row r = sheet.createRow(rowIdx++);
+            r.createCell(0).setCellValue(rowIdx - 1);
+            r.createCell(1).setCellValue(s.getCreateBy());
+            r.createCell(2).setCellValue(s.getStatus());
+            r.createCell(3).setCellValue(s.getCreateTime() != null ? s.getCreateTime().toString() : "");
+            r.createCell(4).setCellValue(s.getSigninTime() != null ? s.getSigninTime().toString() : "");
+            r.createCell(5).setCellValue(s.getRejectReason() != null ? s.getRejectReason() : "");
+        }
+
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        response.setHeader("Content-Disposition", "attachment; filename=" + URLEncoder.encode("报名名单.xlsx", "UTF-8"));
+        wb.write(response.getOutputStream());
+        wb.close();
     }
 
     /** 签到 */

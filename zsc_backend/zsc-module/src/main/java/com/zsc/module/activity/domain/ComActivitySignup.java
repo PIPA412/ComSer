@@ -29,8 +29,11 @@ public class ComActivitySignup extends BaseEntity {
     /** 报名人ID */
     private Long userId;
 
-    /** 报名状态（已报名/已取消） */
+    /** 报名状态（待审核/已通过/已拒绝/已报名） */
     private String status;
+
+    /** 拒绝原因 */
+    private String rejectReason;
 
     /** 签到时间 */
     private Date signinTime;

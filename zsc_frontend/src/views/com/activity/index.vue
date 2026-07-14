@@ -57,6 +57,7 @@
       <el-table-column label="操作" align="center" width="320">
         <template #default="scope">
           <el-button link type="primary" icon="View" @click="openDetail(scope.row)">详情</el-button>
+          <el-button link type="warning" icon="User" @click="openSignup(scope.row)">报名</el-button>
           <el-button v-if="scope.row.status === '草稿' || scope.row.status === '待审核'" link type="success" icon="Promotion" @click="handlePublish(scope.row)" v-hasPermi="['com:activity:edit']">发布</el-button>
           <el-button v-if="scope.row.status !== '已结束' && scope.row.status !== '已取消'" link type="primary" icon="Edit" @click="openEditDialog(scope.row)" v-hasPermi="['com:activity:edit']">修改</el-button>
           <el-button v-if="scope.row.status === '报名中' || scope.row.status === '进行中'" link type="warning" icon="CircleClose" @click="handleFinish(scope.row)" v-hasPermi="['com:activity:edit']">结束</el-button>
@@ -161,6 +162,47 @@
       </template>
     </el-dialog>
 
+    <!-- 报名审核弹窗 -->
+    <el-dialog v-model="signupVisible" :title="'报名管理 - ' + (signupActivity?.title || '')" width="900px" destroy-on-close>
+      <el-row :gutter="10" class="mb8">
+        <el-col :span="1.5">
+          <el-button type="success" plain :disabled="selectedSignups.length === 0" @click="handleBatchApprove">批量通过</el-button>
+        </el-col>
+        <el-col :span="1.5">
+          <el-button type="danger" plain :disabled="selectedSignups.length === 0" @click="openRejectDialog">批量拒绝</el-button>
+        </el-col>
+        <el-col :span="1.5">
+          <el-button type="primary" plain icon="Download" @click="handleExport">导出Excel</el-button>
+        </el-col>
+      </el-row>
+      <el-table v-loading="signupLoading" :data="signupList" @selection-change="s => selectedSignups = s" stripe>
+        <el-table-column type="selection" width="50" />
+        <el-table-column label="报名人" prop="createBy" width="100" />
+        <el-table-column label="状态" prop="status" width="100">
+          <template #default="scope">
+            <el-tag :type="signupStatusTag(scope.row.status)">{{ scope.row.status }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="报名时间" prop="createTime" width="170" />
+        <el-table-column label="签到时间" prop="signinTime" width="170" />
+        <el-table-column label="拒绝原因" prop="rejectReason" show-overflow-tooltip />
+      </el-table>
+      <pagination v-show="signupTotal > 0" :total="signupTotal" v-model:page="signupParams.pageNum" v-model:limit="signupParams.pageSize" @pagination="loadSignups" />
+    </el-dialog>
+
+    <!-- 批量拒绝弹窗 -->
+    <el-dialog v-model="rejectVisible" title="批量拒绝" width="500px" append-to-body>
+      <el-form :model="rejectForm" label-width="80px">
+        <el-form-item label="拒绝原因" required>
+          <el-input v-model="rejectForm.reason" type="textarea" :rows="3" placeholder="填写拒绝原因，将通知报名人..." />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="rejectVisible = false">取消</el-button>
+        <el-button type="danger" @click="handleBatchReject">确认拒绝</el-button>
+      </template>
+    </el-dialog>
+
     <!-- 详情弹窗 -->
     <el-dialog v-model="detailVisible" title="活动详情" width="700px" destroy-on-close>
       <template v-if="currentRow">
@@ -189,8 +231,9 @@
 <script setup name="ActivityManagement">
 import { ref, reactive, getCurrentInstance } from 'vue'
 import { ElMessage } from 'element-plus'
-import { listActivity, addActivity, updateActivity, delActivity } from '@/api/com/activity'
+import { listActivity, addActivity, updateActivity, delActivity, listSignup, batchApproveSignup, batchRejectSignup, exportSignupUrl } from '@/api/com/activity'
 import request from '@/utils/request'
+import { getToken } from '@/utils/auth'
 
 const { proxy } = getCurrentInstance()
 
@@ -291,6 +334,46 @@ async function handleCancel(row) {
 const detailVisible = ref(false)
 const currentRow = ref(null)
 function openDetail(row) { currentRow.value = row; detailVisible.value = true }
+
+// ==================== 报名管理 ====================
+const signupVisible = ref(false), signupLoading = ref(false), signupActivity = ref(null)
+const signupList = ref([]), signupTotal = ref(0), selectedSignups = ref([])
+const signupParams = reactive({ pageNum: 1, pageSize: 10 })
+const rejectVisible = ref(false), rejectForm = reactive({ reason: '' })
+function signupStatusTag(s) { return { '已报名':'info','待审核':'warning','已通过':'success','已拒绝':'danger' }[s]||'' }
+async function openSignup(row) { signupActivity.value=row; signupParams.pageNum=1; signupVisible.value=true; loadSignups() }
+async function loadSignups() { if(!signupActivity.value) return; signupLoading.value=true; try { const res=await listSignup({activityId:signupActivity.value.activityId,...signupParams}); signupList.value=res.rows; signupTotal.value=res.total } finally { signupLoading.value=false } }
+async function handleBatchApprove() { const ids=selectedSignups.value.map(s=>s.signupId); await batchApproveSignup(ids); ElMessage.success('已通过'); selectedSignups.value=[]; loadSignups() }
+function openRejectDialog() { rejectForm.reason=''; rejectVisible.value=true }
+async function handleBatchReject() { if(!rejectForm.reason){ElMessage.warning('请填写拒绝原因');return}; const ids=selectedSignups.value.map(s=>s.signupId); await batchRejectSignup(ids,rejectForm.reason); ElMessage.success('已拒绝'); rejectVisible.value=false; selectedSignups.value=[]; loadSignups() }
+function handleExport() {
+  if(!signupActivity.value) return
+  const token = getToken()
+  const xhr = new XMLHttpRequest()
+  xhr.open('GET', exportSignupUrl(signupActivity.value.activityId), true)
+  xhr.setRequestHeader('Authorization', 'Bearer ' + token)
+  xhr.responseType = 'blob'
+  xhr.onload = function() {
+    if (xhr.status === 200) {
+      const blob = xhr.response
+      if (blob.type.includes('json')) {
+        // 后端返回了JSON错误
+        const reader = new FileReader()
+        reader.onload = () => { try { const r = JSON.parse(reader.result); ElMessage.error(r.msg || '导出失败') } catch(_) { ElMessage.error('导出失败') } }
+        reader.readAsText(blob)
+        return
+      }
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url; a.download = '报名名单.xlsx'; document.body.appendChild(a)
+      a.click(); document.body.removeChild(a); URL.revokeObjectURL(url)
+    } else {
+      ElMessage.error('导出失败')
+    }
+  }
+  xhr.onerror = () => ElMessage.error('网络错误')
+  xhr.send()
+}
 
 getList()
 </script>
