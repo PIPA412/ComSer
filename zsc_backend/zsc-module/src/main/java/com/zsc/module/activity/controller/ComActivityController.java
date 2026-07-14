@@ -86,6 +86,18 @@ public class ComActivityController extends BaseController {
         return toAjax(activityService.updateById(db));
     }
 
+    /** 保存活动回顾 */
+    @PreAuthorize("@ss.hasPermi('com:activity:edit')")
+    @PutMapping("/review")
+    public AjaxResult saveReview(@RequestBody ComActivity activity) {
+        ComActivity db = activityService.getById(activity.getActivityId());
+        if (db == null) return error("活动不存在");
+        db.setReview(activity.getReview());
+        db.setPhotos(activity.getPhotos());
+        db.setUpdateBy(getUsername());
+        return toAjax(activityService.updateById(db));
+    }
+
     /** 结束活动 */
     @PreAuthorize("@ss.hasPermi('com:activity:edit')")
     @PutMapping("/finish")
@@ -137,7 +149,7 @@ public class ComActivityController extends BaseController {
     public TableDataInfo published(ComActivity activity) {
         Page<ComActivity> page = startPage();
         List<ComActivity> list = activityService.lambdaQuery()
-                .eq(ComActivity::getStatus, "报名中")
+                .in(ComActivity::getStatus, "报名中", "已结束")
                 .like(activity.getTitle() != null, ComActivity::getTitle, activity.getTitle())
                 .eq(activity.getActivityType() != null, ComActivity::getActivityType, activity.getActivityType())
                 .orderByDesc(ComActivity::getIsTop)

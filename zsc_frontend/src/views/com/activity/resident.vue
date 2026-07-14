@@ -17,7 +17,8 @@
             <div class="card-title">
               <el-tag v-if="item.isTop" type="warning" effect="dark" size="small" style="margin-right:6px">置顶</el-tag>
               <el-tag :type="typeTag(item.activityType)" size="small" style="margin-right:8px">{{ item.activityType }}</el-tag>
-              <span>{{ item.title }}</span>
+              <span :style="item.status === '已结束' ? 'color:#c0c4cc' : ''">{{ item.title }}</span>
+              <el-tag v-if="item.status === '已结束'" type="info" size="small" style="margin-left:auto">已结束</el-tag>
             </div>
           </template>
           <div class="info-row"><el-icon><Clock /></el-icon> {{ item.activityTime }}</div>
@@ -31,8 +32,14 @@
           </div>
           <el-alert v-if="isUpcoming(item)" title="活动即将开始，请准时参加！" type="warning" :closable="false" show-icon style="margin-bottom:8px" />
           <el-divider style="margin:10px 0" />
+          <div v-if="item.review" class="review-preview" style="margin-bottom:8px;font-size:13px;color:#606266">
+            {{ item.review.slice(0, 80) }}{{ item.review.length > 80 ? '...' : '' }}
+          </div>
           <div class="card-foot">
-            <template v-if="getSignupStatus(item.activityId)">
+            <template v-if="item.status === '已结束'">
+              <el-button v-if="item.review" link type="primary" size="small" @click="openReviewDetail(item)">查看回顾</el-button>
+            </template>
+            <template v-else-if="getSignupStatus(item.activityId)">
               <el-tag :type="signupTag(item.activityId)" size="small" style="margin-right:8px">
                 {{ getSignupStatus(item.activityId) }}
               </el-tag>
@@ -54,6 +61,14 @@
     </div>
 
     <el-empty v-if="!loading && list.length === 0" description="暂无进行中的活动" />
+
+    <!-- 回顾弹窗 -->
+    <el-dialog v-model="reviewVisible" :title="reviewActivity?.title" width="650px">
+      <div v-if="reviewActivity?.photos" style="margin-bottom:12px">
+        <el-image v-for="(url, i) in parsePhotos(reviewActivity.photos)" :key="i" :src="url" style="width:150px;height:100px;margin-right:8px" fit="cover" :preview-src-list="parsePhotos(reviewActivity.photos)" />
+      </div>
+      <div style="white-space:pre-wrap;line-height:1.8">{{ reviewActivity?.review }}</div>
+    </el-dialog>
 
     <!-- 签到弹窗 -->
     <el-dialog v-model="checkinVisible" title="活动签到" width="400px">
@@ -157,6 +172,10 @@ async function handleCheckin() {
     await loadMySignups()
   } catch { /* error handled by interceptor */ }
 }
+
+const reviewVisible = ref(false), reviewActivity = ref(null)
+function openReviewDetail(item) { reviewActivity.value = item; reviewVisible.value = true }
+function parsePhotos(str) { try { return JSON.parse(str) } catch { return [] } }
 
 onMounted(async () => {
   await getList()

@@ -60,6 +60,7 @@
           <el-button link type="warning" icon="User" @click="openSignup(scope.row)">报名</el-button>
           <el-button v-if="scope.row.status === '草稿' || scope.row.status === '待审核'" link type="success" icon="Promotion" @click="handlePublish(scope.row)" v-hasPermi="['com:activity:edit']">发布</el-button>
           <el-button v-if="scope.row.status !== '已结束' && scope.row.status !== '已取消'" link type="primary" icon="Edit" @click="openEditDialog(scope.row)" v-hasPermi="['com:activity:edit']">修改</el-button>
+          <el-button v-if="scope.row.status === '已结束'" link type="success" icon="Edit" @click="openReview(scope.row)" v-hasPermi="['com:activity:edit']">回顾</el-button>
           <el-button v-if="scope.row.status === '报名中' || scope.row.status === '进行中'" link type="warning" icon="CircleClose" @click="handleFinish(scope.row)" v-hasPermi="['com:activity:edit']">结束</el-button>
           <el-button link :type="scope.row.isTop ? 'warning' : 'info'" :icon="scope.row.isTop ? 'Top' : 'Top'" @click="handleToggleTop(scope.row)" v-hasPermi="['com:activity:edit']">{{ scope.row.isTop ? '取消置顶' : '置顶' }}</el-button>
           <el-button v-if="scope.row.status !== '已结束' && scope.row.status !== '已取消'" link type="danger" icon="Delete" @click="handleCancel(scope.row)" v-hasPermi="['com:activity:remove']">取消</el-button>
@@ -168,6 +169,22 @@
       </template>
     </el-dialog>
 
+    <!-- 活动回顾弹窗 -->
+    <el-dialog v-model="reviewVisible" title="活动回顾" width="700px" destroy-on-close>
+      <el-form :model="reviewForm" label-width="80px">
+        <el-form-item label="活动照片">
+          <image-upload v-model="reviewForm.photos" />
+        </el-form-item>
+        <el-form-item label="活动总结">
+          <el-input v-model="reviewForm.review" type="textarea" :rows="8" placeholder="写活动总结..." maxlength="2000" show-word-limit />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="reviewVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleSaveReview">保存回顾</el-button>
+      </template>
+    </el-dialog>
+
     <!-- 报名审核弹窗 -->
     <el-dialog v-model="signupVisible" :title="'报名管理 - ' + (signupActivity?.title || '')" width="900px" destroy-on-close>
       <el-row :gutter="10" class="mb8">
@@ -251,7 +268,7 @@
 <script setup name="ActivityManagement">
 import { ref, reactive, getCurrentInstance } from 'vue'
 import { ElMessage } from 'element-plus'
-import { listActivity, addActivity, updateActivity, delActivity, listSignup, batchApproveSignup, batchRejectSignup, exportSignupUrl, markAbsent } from '@/api/com/activity'
+import { listActivity, addActivity, updateActivity, delActivity, listSignup, batchApproveSignup, batchRejectSignup, exportSignupUrl, markAbsent, saveReview } from '@/api/com/activity'
 import request from '@/utils/request'
 import { getToken } from '@/utils/auth'
 
@@ -360,6 +377,14 @@ async function handleCancel(row) {
 // ==================== 详情 ====================
 const detailVisible = ref(false)
 const currentRow = ref(null)
+const reviewVisible = ref(false), reviewRow = ref(null)
+const reviewForm = reactive({ photos: '', review: '' })
+function openReview(row) { reviewRow.value = row; reviewForm.photos = row.photos || ''; reviewForm.review = row.review || ''; reviewVisible.value = true }
+async function handleSaveReview() {
+  await saveReview({ activityId: reviewRow.value.activityId, photos: reviewForm.photos, review: reviewForm.review })
+  ElMessage.success('回顾已保存'); reviewVisible.value = false; getList()
+}
+
 function openDetail(row) { currentRow.value = row; detailVisible.value = true }
 
 // ==================== 报名管理 ====================

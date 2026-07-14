@@ -50,3 +50,6 @@ export function checkinActivity(data) {
 export function markAbsent(signupId) {
   return request({ url: '/com/activity/signup/absent/' + signupId, method: 'put' })
 }
+export function saveReview(data) {
+  return request({ url: '/com/activity/review', method: 'put', data })
+}
