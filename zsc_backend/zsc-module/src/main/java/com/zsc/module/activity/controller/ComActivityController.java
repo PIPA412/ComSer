@@ -51,8 +51,44 @@ public class ComActivityController extends BaseController {
     @PostMapping
     public AjaxResult add(@RequestBody ComActivity activity) {
         activity.setCreateBy(getUsername());
-        activity.setStatus("草稿");
+        activity.setCreateTime(new java.util.Date());
+        if (activity.getStatus() == null) activity.setStatus("草稿");
+        if (activity.getActualParticipants() == null) activity.setActualParticipants(0);
         return toAjax(activityService.save(activity));
+    }
+
+    /** 发布活动（草稿/待审核 → 报名中） */
+    @PreAuthorize("@ss.hasPermi('com:activity:edit')")
+    @PutMapping("/publish")
+    public AjaxResult publish(@RequestBody ComActivity activity) {
+        ComActivity db = activityService.getById(activity.getActivityId());
+        if (db == null) return error("活动不存在");
+        if (!"草稿".equals(db.getStatus()) && !"待审核".equals(db.getStatus())) return error("仅草稿/待审核状态可发布");
+        db.setStatus("报名中");
+        db.setUpdateBy(getUsername());
+        return toAjax(activityService.updateById(db));
+    }
+
+    /** 结束活动 */
+    @PreAuthorize("@ss.hasPermi('com:activity:edit')")
+    @PutMapping("/finish")
+    public AjaxResult finish(@RequestBody ComActivity activity) {
+        ComActivity db = activityService.getById(activity.getActivityId());
+        if (db == null) return error("活动不存在");
+        db.setStatus("已结束");
+        db.setUpdateBy(getUsername());
+        return toAjax(activityService.updateById(db));
+    }
+
+    /** 取消活动 */
+    @PreAuthorize("@ss.hasPermi('com:activity:edit')")
+    @PutMapping("/cancel")
+    public AjaxResult cancel(@RequestBody ComActivity activity) {
+        ComActivity db = activityService.getById(activity.getActivityId());
+        if (db == null) return error("活动不存在");
+        db.setStatus("已取消");
+        db.setUpdateBy(getUsername());
+        return toAjax(activityService.updateById(db));
     }
 
     @PreAuthorize("@ss.hasPermi('com:activity:edit')")

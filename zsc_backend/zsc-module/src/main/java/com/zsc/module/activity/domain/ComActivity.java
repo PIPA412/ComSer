@@ -1,11 +1,14 @@
 package com.zsc.module.activity.domain;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.zsc.common.core.domain.BaseEntity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+import java.math.BigDecimal;
 import java.util.Date;
 
 /**
@@ -30,6 +33,7 @@ public class ComActivity extends BaseEntity {
     private String content;
 
     /** 活动时间 */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date activityTime;
 
     /** 活动地点 */
@@ -42,12 +46,22 @@ public class ComActivity extends BaseEntity {
     private Integer actualParticipants;
 
     /** 报名截止时间 */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date signupDeadline;
 
     /** 活动类型 */
     private String activityType;
 
-    /** 状态（草稿/报名中/进行中/已结束/已取消） */
+    /** 费用 */
+    private BigDecimal fee;
+
+    /** 参与对象 */
+    private String targetAudience;
+
+    /** 发布范围 */
+    private String publishScope;
+
+    /** 状态（草稿/待审核/报名中/进行中/已结束/已取消） */
     private String status;
 
     /** 活动回顾 */
