@@ -29,6 +29,11 @@ export function complaintStatistics() {
   return request({ url: '/com/complaint/statistics', method: 'get' })
 }
 
+// 数据大盘
+export function complaintDashboard() {
+  return request({ url: '/com/complaint/dashboard', method: 'get' })
+}
+
 // 当前用户的投诉/建议
 export function listMyComplaint(query) {
   return request({ url: '/com/complaint/my', method: 'get', params: query })

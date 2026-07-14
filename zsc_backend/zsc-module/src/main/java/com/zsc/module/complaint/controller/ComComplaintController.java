@@ -172,6 +172,60 @@ public class ComComplaintController extends BaseController {
         return success(result);
     }
 
+    // ==================== 数据统计 ====================
+    @PreAuthorize("@ss.hasPermi('com:complaint:list')")
+    @GetMapping("/dashboard")
+    public AjaxResult dashboard() {
+        List<ComComplaint> all = complaintService.list();
+        Map<String, Object> result = new HashMap<>();
+
+        // 1. 类型分布
+        Map<String, Long> typeDist = all.stream()
+                .collect(Collectors.groupingBy(c -> isNotEmpty(c.getType()) ? c.getType() : "未知", Collectors.counting()));
+        Map<String, Long> categoryDist = all.stream()
+                .collect(Collectors.groupingBy(c -> isNotEmpty(c.getCategory()) ? c.getCategory() : "未分类", Collectors.counting()));
+        result.put("typeDistribution", typeDist);
+        result.put("categoryDistribution", categoryDist);
+
+        // 2. 处理时长（小时）
+        List<ComComplaint> done = all.stream()
+                .filter(c -> c.getAcceptTime() != null && c.getFinishTime() != null)
+                .collect(Collectors.toList());
+        if (!done.isEmpty()) {
+            double avgHours = done.stream()
+                    .mapToLong(c -> (c.getFinishTime().getTime() - c.getAcceptTime().getTime()) / 3600000)
+                    .average().orElse(0);
+            long maxHours = done.stream()
+                    .mapToLong(c -> (c.getFinishTime().getTime() - c.getAcceptTime().getTime()) / 3600000)
+                    .max().orElse(0);
+            long minHours = done.stream()
+                    .mapToLong(c -> (c.getFinishTime().getTime() - c.getAcceptTime().getTime()) / 3600000)
+                    .min().orElse(0);
+            result.put("avgDurationHours", Math.round(avgHours * 10) / 10.0);
+            result.put("maxDurationHours", maxHours);
+            result.put("minDurationHours", minHours);
+        }
+
+        // 3. 满意度趋势（按月）
+        List<ComComplaint> rated = all.stream()
+                .filter(c -> c.getRating() != null && c.getCreateTime() != null)
+                .collect(Collectors.toList());
+        Map<String, Double> ratingTrend = rated.stream()
+                .collect(Collectors.groupingBy(
+                        c -> String.format("%tY-%<tm", c.getCreateTime()),
+                        TreeMap::new,
+                        Collectors.averagingInt(ComComplaint::getRating)
+                ));
+        result.put("ratingTrend", ratingTrend);
+        result.put("totalCount", all.size());
+        result.put("doneCount", done.size());
+        result.put("ratedCount", rated.size());
+
+        return success(result);
+    }
+
+    private boolean isNotEmpty(String s) { return s != null && !s.isEmpty(); }
+
     // ==================== 预警工具 ====================
     private void calcWarn(ComComplaint c) {
         if (!"处理中".equals(c.getStatus()) || c.getDeadline() == null) return;
