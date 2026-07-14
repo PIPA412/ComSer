@@ -242,6 +242,29 @@ public class ComActivityController extends BaseController {
         return success(list);
     }
 
+    // ==================== 活动统计 ====================
+    @PreAuthorize("@ss.hasPermi('com:activity:list')")
+    @GetMapping("/stats")
+    public AjaxResult stats() {
+        List<ComActivity> activities = activityService.list();
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (ComActivity a : activities) {
+            long signupCount = signupService.lambdaQuery().eq(ComActivitySignup::getActivityId, a.getActivityId()).count();
+            long attendCount = signupService.lambdaQuery().eq(ComActivitySignup::getActivityId, a.getActivityId()).eq(ComActivitySignup::getAttendStatus, "已签到").count();
+            Map<String, Object> m = new HashMap<>();
+            m.put("activityId", a.getActivityId());
+            m.put("title", a.getTitle());
+            m.put("activityType", a.getActivityType());
+            m.put("status", a.getStatus());
+            m.put("signupCount", signupCount);
+            m.put("attendCount", attendCount);
+            m.put("hasReview", a.getReview() != null && !a.getReview().isEmpty());
+            m.put("activityTime", a.getActivityTime());
+            result.add(m);
+        }
+        return success(result);
+    }
+
     // ==================== 报名审核 ====================
     /** 批量通过 */
     @PreAuthorize("@ss.hasPermi('com:activity:signup:list')")

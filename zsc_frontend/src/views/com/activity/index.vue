@@ -34,6 +34,7 @@
     <el-row :gutter="10" class="mb8">
       <el-col :span="1.5">
         <el-button type="primary" plain icon="Plus" @click="openAddDialog" v-hasPermi="['com:activity:add']">新增活动</el-button>
+        <el-button type="warning" plain icon="DataAnalysis" @click="openStats" v-hasPermi="['com:activity:list']">活动统计</el-button>
       </el-col>
       <right-toolbar v-model:showSearch="showSearch" @queryTable="getList" />
     </el-row>
@@ -169,6 +170,29 @@
       </template>
     </el-dialog>
 
+    <!-- 活动统计弹窗 -->
+    <el-dialog v-model="statsVisible" title="活动统计" width="900px" destroy-on-close>
+      <el-table :data="statsList" stripe>
+        <el-table-column label="活动" prop="title" show-overflow-tooltip />
+        <el-table-column label="类型" prop="activityType" width="100" />
+        <el-table-column label="状态" prop="status" width="100" />
+        <el-table-column label="报名人数" prop="signupCount" width="100" />
+        <el-table-column label="实到人数" prop="attendCount" width="100">
+          <template #default="scope">
+            <span :style="{ color: scope.row.signupCount > 0 && scope.row.attendCount === 0 ? '#f56c6c' : '#67c23a' }">{{ scope.row.attendCount }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="签到率" width="100">
+          <template #default="scope">{{ scope.row.signupCount > 0 ? Math.round(scope.row.attendCount / scope.row.signupCount * 100) + '%' : '-' }}</template>
+        </el-table-column>
+        <el-table-column label="活动回顾" width="80">
+          <template #default="scope">
+            <el-tag :type="scope.row.hasReview ? 'success' : 'info'" size="small">{{ scope.row.hasReview ? '已发布' : '未发布' }}</el-tag>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-dialog>
+
     <!-- 活动回顾弹窗 -->
     <el-dialog v-model="reviewVisible" title="活动回顾" width="700px" destroy-on-close>
       <el-form :model="reviewForm" label-width="80px">
@@ -268,7 +292,7 @@
 <script setup name="ActivityManagement">
 import { ref, reactive, getCurrentInstance } from 'vue'
 import { ElMessage } from 'element-plus'
-import { listActivity, addActivity, updateActivity, delActivity, listSignup, batchApproveSignup, batchRejectSignup, exportSignupUrl, markAbsent, saveReview } from '@/api/com/activity'
+import { listActivity, addActivity, updateActivity, delActivity, listSignup, batchApproveSignup, batchRejectSignup, exportSignupUrl, markAbsent, saveReview, activityStats } from '@/api/com/activity'
 import request from '@/utils/request'
 import { getToken } from '@/utils/auth'
 
@@ -377,6 +401,9 @@ async function handleCancel(row) {
 // ==================== 详情 ====================
 const detailVisible = ref(false)
 const currentRow = ref(null)
+const statsVisible = ref(false), statsList = ref([])
+async function openStats() { try { const res = await activityStats(); statsList.value = res.data || [] } catch { statsList.value = [] }; statsVisible.value = true }
+
 const reviewVisible = ref(false), reviewRow = ref(null)
 const reviewForm = reactive({ photos: '', review: '' })
 function openReview(row) { reviewRow.value = row; reviewForm.photos = row.photos || ''; reviewForm.review = row.review || ''; reviewVisible.value = true }

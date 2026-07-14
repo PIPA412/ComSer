@@ -53,3 +53,6 @@ export function markAbsent(signupId) {
 export function saveReview(data) {
   return request({ url: '/com/activity/review', method: 'put', data })
 }
+export function activityStats() {
+  return request({ url: '/com/activity/stats', method: 'get' })
+}
