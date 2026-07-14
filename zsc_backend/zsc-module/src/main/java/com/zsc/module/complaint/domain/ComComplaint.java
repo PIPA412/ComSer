@@ -27,6 +27,12 @@ public class ComComplaint extends BaseEntity {
     /** 类型（投诉/建议） */
     private String type;
 
+    /** 分类（安全/卫生/噪音/设施/其他） */
+    private String category;
+
+    /** 紧急程度（普通/紧急） */
+    private String urgency;
+
     /** 提交人ID */
     private Long userId;
 

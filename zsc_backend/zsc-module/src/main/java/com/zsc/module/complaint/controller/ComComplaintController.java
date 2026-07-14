@@ -34,9 +34,12 @@ public class ComComplaintController extends BaseController {
         Page<ComComplaint> page = startPage();
         List<ComComplaint> list = complaintService.lambdaQuery()
                 .eq(complaint.getType() != null, ComComplaint::getType, complaint.getType())
+                .eq(complaint.getCategory() != null, ComComplaint::getCategory, complaint.getCategory())
+                .eq(complaint.getUrgency() != null, ComComplaint::getUrgency, complaint.getUrgency())
                 .eq(complaint.getStatus() != null, ComComplaint::getStatus, complaint.getStatus())
                 .like(complaint.getTitle() != null, ComComplaint::getTitle, complaint.getTitle())
                 .eq(complaint.getUserId() != null, ComComplaint::getUserId, complaint.getUserId())
+                .orderByDesc(ComComplaint::getUrgency)
                 .orderByDesc(ComComplaint::getCreateTime)
                 .page(page).getRecords();
         return getDataTable(list);

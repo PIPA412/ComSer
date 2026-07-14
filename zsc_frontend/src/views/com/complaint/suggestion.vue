@@ -9,6 +9,22 @@
         </div>
       </template>
       <el-form ref="formRef" :model="form" :rules="formRules" label-width="100px" style="max-width: 800px">
+        <el-form-item label="建议分类" prop="category">
+          <el-select v-model="form.category" placeholder="请选择分类" clearable>
+            <el-option label="社区活动" value="活动" />
+            <el-option label="便民服务" value="便民" />
+            <el-option label="环境美化" value="环境" />
+            <el-option label="设施建设" value="设施" />
+            <el-option label="物业管理" value="物业" />
+            <el-option label="其他" value="其他" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="紧急程度" prop="urgency">
+          <el-radio-group v-model="form.urgency">
+            <el-radio value="普通">普通</el-radio>
+            <el-radio value="紧急">紧急</el-radio>
+          </el-radio-group>
+        </el-form-item>
         <el-form-item label="建议标题" prop="title">
           <el-input v-model="form.title" placeholder="请输入建议标题（2-100字）" maxlength="100" show-word-limit />
         </el-form-item>
@@ -37,6 +53,12 @@
       </template>
       <el-table v-loading="loading" :data="list" stripe>
         <el-table-column label="标题" prop="title" show-overflow-tooltip />
+        <el-table-column label="紧急" prop="urgency" width="80">
+          <template #default="scope">
+            <el-tag v-if="scope.row.urgency === '紧急'" type="danger" size="small">紧急</el-tag>
+            <span v-else style="color:#909399">普通</span>
+          </template>
+        </el-table-column>
         <el-table-column label="状态" prop="status" width="100">
           <template #default="scope">
             <el-tag :type="statusTag(scope.row.status)">{{ scope.row.status }}</el-tag>
@@ -71,7 +93,7 @@ import { addComplaint, listMyComplaint, rateComplaint } from '@/api/com/complain
 const { proxy } = getCurrentInstance()
 
 const formRef = ref(null)
-const form = reactive({ title: '', content: '', images: '' })
+const form = reactive({ category: '', urgency: '普通', title: '', content: '', images: '' })
 const submitting = ref(false)
 
 const formRules = {
@@ -108,9 +130,9 @@ async function handleSubmit() {
     if (!valid) return
     submitting.value = true
     try {
-      await addComplaint({ title: form.title, content: form.content, images: form.images, type: '建议' })
+      await addComplaint({ category: form.category, urgency: form.urgency, title: form.title, content: form.content, images: form.images, type: '建议' })
       ElMessage.success('建议提交成功！')
-      form.title = ''; form.content = ''; form.images = ''
+      form.category = ''; form.urgency = '普通'; form.title = ''; form.content = ''; form.images = ''
       formRef.value.resetFields()
       getList()
     } finally { submitting.value = false }
@@ -124,7 +146,7 @@ async function handleRate(row, val) {
 }
 
 function resetForm() {
-  form.title = ''; form.content = ''; form.images = ''
+  form.category = ''; form.urgency = '普通'; form.title = ''; form.content = ''; form.images = ''
   formRef.value?.resetFields()
 }
 

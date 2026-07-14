@@ -7,6 +7,12 @@
           <el-option label="建议" value="建议" />
         </el-select>
       </el-form-item>
+      <el-form-item label="紧急" prop="urgency">
+        <el-select v-model="queryParams.urgency" placeholder="紧急程度" clearable style="width:100px">
+          <el-option label="紧急" value="紧急" />
+          <el-option label="普通" value="普通" />
+        </el-select>
+      </el-form-item>
       <el-form-item label="状态" prop="status">
         <el-select v-model="queryParams.status" placeholder="状态" clearable>
           <el-option label="待受理" value="待受理" />
@@ -24,12 +30,19 @@
       <right-toolbar v-model:showSearch="showSearch" @queryTable="getList" />
     </el-row>
 
-    <el-table v-loading="loading" :data="complaintList" stripe>
+    <el-table v-loading="loading" :data="complaintList">
       <el-table-column label="类型" prop="type" width="80">
         <template #default="scope">
           <el-tag :type="scope.row.type === '投诉' ? 'danger' : 'info'">{{ scope.row.type }}</el-tag>
         </template>
       </el-table-column>
+      <el-table-column label="紧急" prop="urgency" width="80">
+        <template #default="scope">
+          <el-tag v-if="scope.row.urgency === '紧急'" type="danger" size="small">紧急</el-tag>
+          <span v-else style="color:#909399">普通</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="分类" prop="category" width="90" />
       <el-table-column label="标题" prop="title" show-overflow-tooltip />
       <el-table-column label="提交人" prop="createBy" width="100" />
       <el-table-column label="状态" prop="status" width="100">
@@ -120,7 +133,7 @@ const loading = ref(false)
 const showSearch = ref(true)
 const total = ref(0)
 const complaintList = ref([])
-const queryParams = reactive({ pageNum: 1, pageSize: 10, type: null, status: null })
+const queryParams = reactive({ pageNum: 1, pageSize: 10, type: null, urgency: null, status: null })
 
 function statusTag(status) {
   return { '待受理': 'warning', '处理中': 'primary', '已完成': 'success' }[status] || 'info'
