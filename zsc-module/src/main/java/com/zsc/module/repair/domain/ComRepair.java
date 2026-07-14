@@ -1,5 +1,6 @@
 package com.zsc.module.repair.domain;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.zsc.common.core.domain.BaseEntity;
@@ -30,6 +31,12 @@ public class ComRepair extends BaseEntity {
     /** 房屋ID */
     private Long roomId;
 
+    /** 楼栋名称（提交时保存，方便列表展示） */
+    private String buildingName;
+
+    /** 门牌号（提交时保存，方便列表展示） */
+    private String roomNumber;
+
     /** 维修类型 */
     private String repairType;
 
@@ -42,7 +49,10 @@ public class ComRepair extends BaseEntity {
     /** 图片/视频地址（JSON数组） */
     private String mediaUrls;
 
-    /** 状态（待受理/处理中/已完成/已取消） */
+    /** 处理备注 */
+    private String handleNote;
+
+    /** 状态（待处理/处理中/已完成/已取消） */
     private String status;
 
     /** 受理人ID */
@@ -59,4 +69,12 @@ public class ComRepair extends BaseEntity {
 
     /** 评价内容 */
     private String feedback;
+
+    /** 已过小时数（计算字段，不持久化） */
+    @TableField(exist = false)
+    private Long elapsedHours;
+
+    /** 是否超时（计算字段，不持久化） */
+    @TableField(exist = false)
+    private Boolean timeoutWarning;
 }

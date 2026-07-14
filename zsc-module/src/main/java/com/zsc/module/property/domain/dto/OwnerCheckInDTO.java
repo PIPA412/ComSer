@@ -1,5 +1,6 @@
 package com.zsc.module.property.domain.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -9,8 +10,8 @@ import lombok.Data;
 import java.util.Date;
 
 /**
- * 住户入住登记 DTO
- * 一次性创建住户信息并绑定房屋
+ * 居民入住登记 DTO
+ * 一次性创建居民信息并绑定房屋
  *
  * @author zsc
  */
@@ -39,7 +40,7 @@ public class OwnerCheckInDTO {
     @Size(max = 100, message = "备用联系方式不能超过100个字符")
     private String backupContact;
 
-    /** 住户类型（业主/租户/家属） */
+    /** 住户类型（户主/家属/租客） */
     @NotBlank(message = "住户类型不能为空")
     private String ownerType;
 
@@ -47,9 +48,10 @@ public class OwnerCheckInDTO {
     @NotNull(message = "房屋ID不能为空")
     private Long roomId;
 
-    /** 关联类型（产权人/租户/家属），默认与ownerType相同 */
+    /** 身份类型（户主/家属/租客），默认与ownerType相同 */
     private String relationType;
 
     /** 入住日期 */
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private Date checkInDate;
 }
