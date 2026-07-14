@@ -49,6 +49,10 @@ public class ComActivity extends BaseEntity {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private Date signupDeadline;
 
+    /** 报名开始时间 */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private Date signupStartTime;
+
     /** 活动类型 */
     private String activityType;
 
@@ -60,6 +64,9 @@ public class ComActivity extends BaseEntity {
 
     /** 发布范围 */
     private String publishScope;
+
+    /** 签到码 */
+    private String checkinCode;
 
     /** 状态（草稿/待审核/报名中/进行中/已结束/已取消） */
     private String status;

@@ -100,12 +100,17 @@
           </el-col>
           <el-col :span="12">
             <el-form-item label="活动时间" prop="activityTime">
-              <el-date-picker v-model="form.activityTime" type="datetime" placeholder="选择时间" style="width:100%" value-format="YYYY-MM-DD HH:mm:ss" />
+              <el-date-picker v-model="form.activityTime" type="datetime" placeholder="选择时间" style="width:100%" value-format="YYYY-MM-DD HH:mm:ss" :disabled-date="disabledDate" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="报名开始" prop="signupStartTime">
+              <el-date-picker v-model="form.signupStartTime" type="datetime" placeholder="开始时间" style="width:100%" value-format="YYYY-MM-DD HH:mm:ss" :disabled-date="disabledDate" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
             <el-form-item label="报名截止" prop="signupDeadline">
-              <el-date-picker v-model="form.signupDeadline" type="datetime" placeholder="截止时间" style="width:100%" value-format="YYYY-MM-DD HH:mm:ss" />
+              <el-date-picker v-model="form.signupDeadline" type="datetime" placeholder="截止时间" style="width:100%" value-format="YYYY-MM-DD HH:mm:ss" :disabled-date="disabledDate" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
@@ -179,14 +184,24 @@
       <el-table v-loading="signupLoading" :data="signupList" @selection-change="s => selectedSignups = s" stripe>
         <el-table-column type="selection" width="50" />
         <el-table-column label="报名人" prop="createBy" width="100" />
-        <el-table-column label="状态" prop="status" width="100">
+        <el-table-column label="审核" prop="status" width="80">
           <template #default="scope">
             <el-tag :type="signupStatusTag(scope.row.status)">{{ scope.row.status }}</el-tag>
           </template>
         </el-table-column>
+        <el-table-column label="考勤" prop="attendStatus" width="80">
+          <template #default="scope">
+            <el-tag v-if="scope.row.attendStatus === '已签到'" type="success" size="small">已签到</el-tag>
+            <el-tag v-else-if="scope.row.attendStatus === '已缺席'" type="danger" size="small">已缺席</el-tag>
+            <span v-else style="color:#c0c4cc">未签到</span>
+          </template>
+        </el-table-column>
         <el-table-column label="报名时间" prop="createTime" width="170" />
-        <el-table-column label="签到时间" prop="signinTime" width="170" />
-        <el-table-column label="拒绝原因" prop="rejectReason" show-overflow-tooltip />
+        <el-table-column label="操作" width="80">
+          <template #default="scope">
+            <el-button v-if="scope.row.attendStatus !== '已签到' && scope.row.attendStatus !== '已缺席'" link type="danger" size="small" @click="handleMarkAbsent(scope.row)">缺席</el-button>
+          </template>
+        </el-table-column>
       </el-table>
       <pagination v-show="signupTotal > 0" :total="signupTotal" v-model:page="signupParams.pageNum" v-model:limit="signupParams.pageSize" @pagination="loadSignups" />
     </el-dialog>
@@ -219,6 +234,10 @@
           <el-descriptions-item label="人数">{{ currentRow.actualParticipants || 0 }}/{{ currentRow.maxParticipants || '不限' }}</el-descriptions-item>
           <el-descriptions-item label="费用">{{ currentRow.fee > 0 ? '¥' + currentRow.fee : '免费' }}</el-descriptions-item>
           <el-descriptions-item label="参与对象">{{ currentRow.targetAudience || '全体居民' }}</el-descriptions-item>
+          <el-descriptions-item label="签到码">
+            <el-tag v-if="currentRow.checkinCode" type="success">{{ currentRow.checkinCode }}</el-tag>
+            <span v-else>发布后自动生成</span>
+          </el-descriptions-item>
           <el-descriptions-item label="发布范围">{{ currentRow.publishScope || '全社区' }}</el-descriptions-item>
           <el-descriptions-item label="发布人">{{ currentRow.createBy }}</el-descriptions-item>
           <el-descriptions-item label="发布时间">{{ currentRow.createTime }}</el-descriptions-item>
@@ -232,7 +251,7 @@
 <script setup name="ActivityManagement">
 import { ref, reactive, getCurrentInstance } from 'vue'
 import { ElMessage } from 'element-plus'
-import { listActivity, addActivity, updateActivity, delActivity, listSignup, batchApproveSignup, batchRejectSignup, exportSignupUrl } from '@/api/com/activity'
+import { listActivity, addActivity, updateActivity, delActivity, listSignup, batchApproveSignup, batchRejectSignup, exportSignupUrl, markAbsent } from '@/api/com/activity'
 import request from '@/utils/request'
 import { getToken } from '@/utils/auth'
 
@@ -248,6 +267,7 @@ const queryParams = reactive({ pageNum: 1, pageSize: 10, title: null, activityTy
 function statusTag(s) {
   return { '草稿': '', '待审核': 'warning', '报名中': 'success', '进行中': 'primary', '已结束': 'info', '已取消': 'danger' }[s] || ''
 }
+function disabledDate(time) { return time.getTime() < Date.now() - 86400000 }
 
 async function getList() {
   loading.value = true
@@ -265,7 +285,7 @@ const isEdit = ref(false)
 const submitting = ref(false)
 const formRef = ref(null)
 const form = reactive({
-  activityId: null, title: '', activityType: '', activityTime: '', signupDeadline: '',
+  activityId: null, title: '', activityType: '', activityTime: '', signupStartTime: '', signupDeadline: '',
   location: '', maxParticipants: 0, fee: 0, targetAudience: '全体居民', publishScope: '全社区',
   content: '', remark: '', status: '草稿'
 })
@@ -278,7 +298,7 @@ const rules = {
 
 function openAddDialog() {
   isEdit.value = false
-  Object.assign(form, { activityId: null, title: '', activityType: '', activityTime: '', signupDeadline: '', location: '', maxParticipants: 0, fee: 0, targetAudience: '全体居民', publishScope: '全社区', content: '', remark: '', status: '草稿' })
+  Object.assign(form, { activityId: null, title: '', activityType: '', activityTime: '', signupStartTime: '', signupDeadline: '', location: '', maxParticipants: 0, fee: 0, targetAudience: '全体居民', publishScope: '全社区', content: '', remark: '', status: '草稿' })
   dialogVisible.value = true
 }
 
@@ -353,6 +373,14 @@ async function loadSignups() { if(!signupActivity.value) return; signupLoading.v
 async function handleBatchApprove() { const ids=selectedSignups.value.map(s=>s.signupId); await batchApproveSignup(ids); ElMessage.success('已通过'); selectedSignups.value=[]; loadSignups() }
 function openRejectDialog() { rejectForm.reason=''; rejectVisible.value=true }
 async function handleBatchReject() { if(!rejectForm.reason){ElMessage.warning('请填写拒绝原因');return}; const ids=selectedSignups.value.map(s=>s.signupId); await batchRejectSignup(ids,rejectForm.reason); ElMessage.success('已拒绝'); rejectVisible.value=false; selectedSignups.value=[]; loadSignups() }
+async function handleMarkAbsent(row) {
+  proxy.$modal.confirm('确认标记为缺席？').then(async () => {
+    await markAbsent(row.signupId)
+    ElMessage.success('已标记缺席')
+    loadSignups()
+  })
+}
+
 function handleExport() {
   if(!signupActivity.value) return
   const token = getToken()

@@ -46,6 +46,11 @@ public class ComActivityController extends BaseController {
                 .orderByDesc(ComActivity::getIsTop)
                 .orderByDesc(ComActivity::getCreateTime)
                 .page(page).getRecords();
+        // 从报名记录实时统计人数
+        list.forEach(a -> {
+            long c = signupService.lambdaQuery().eq(ComActivitySignup::getActivityId, a.getActivityId()).count();
+            a.setActualParticipants((int) c);
+        });
         return getDataTable(list);
     }
 
@@ -74,6 +79,10 @@ public class ComActivityController extends BaseController {
         if (!"草稿".equals(db.getStatus()) && !"待审核".equals(db.getStatus())) return error("仅草稿/待审核状态可发布");
         db.setStatus("报名中");
         db.setUpdateBy(getUsername());
+        // 生成6位签到码
+        if (db.getCheckinCode() == null || db.getCheckinCode().isEmpty()) {
+            db.setCheckinCode(String.format("%06d", new java.util.Random().nextInt(1000000)));
+        }
         return toAjax(activityService.updateById(db));
     }
 
@@ -134,6 +143,10 @@ public class ComActivityController extends BaseController {
                 .orderByDesc(ComActivity::getIsTop)
                 .orderByDesc(ComActivity::getCreateTime)
                 .page(page).getRecords();
+        list.forEach(a -> {
+            long c = signupService.lambdaQuery().eq(ComActivitySignup::getActivityId, a.getActivityId()).count();
+            a.setActualParticipants((int) c);
+        });
         return getDataTable(list);
     }
 
@@ -145,6 +158,9 @@ public class ComActivityController extends BaseController {
         List<ComActivitySignup> list = signupService.lambdaQuery()
                 .eq(signup.getActivityId() != null, ComActivitySignup::getActivityId, signup.getActivityId())
                 .eq(signup.getUserId() != null, ComActivitySignup::getUserId, signup.getUserId())
+                .eq(signup.getStatus() != null, ComActivitySignup::getStatus, signup.getStatus())
+                .eq(signup.getAttendStatus() != null, ComActivitySignup::getAttendStatus, signup.getAttendStatus())
+                .orderByDesc(ComActivitySignup::getCreateTime)
                 .page(page).getRecords();
         return getDataTable(list);
     }
@@ -156,6 +172,12 @@ public class ComActivityController extends BaseController {
         ComActivity activity = activityService.getById(signup.getActivityId());
         if (activity == null) return error("活动不存在");
         if (!"报名中".equals(activity.getStatus())) return error("该活动暂不接受报名");
+        // 校验报名时间窗口
+        Date now = new Date();
+        if (activity.getSignupStartTime() != null && now.before(activity.getSignupStartTime()))
+            return error("报名尚未开始");
+        if (activity.getSignupDeadline() != null && now.after(activity.getSignupDeadline()))
+            return error("报名已截止");
         // 校验重复报名
         long count = signupService.lambdaQuery()
                 .eq(ComActivitySignup::getActivityId, signup.getActivityId())
@@ -266,6 +288,43 @@ public class ComActivityController extends BaseController {
         response.setHeader("Content-Disposition", "attachment; filename=" + URLEncoder.encode("报名名单.xlsx", "UTF-8"));
         wb.write(response.getOutputStream());
         wb.close();
+    }
+
+    /** 居民扫码签到 */
+    @PostMapping("/checkin")
+    public AjaxResult checkin(@RequestBody Map<String, Object> body) {
+        String code = (String) body.get("code");
+        if (code == null || code.trim().isEmpty()) return error("请输入签到码");
+        // 查找活动
+        ComActivity activity = activityService.lambdaQuery()
+                .eq(ComActivity::getCheckinCode, code.trim())
+                .eq(ComActivity::getStatus, "报名中")
+                .one();
+        if (activity == null) return error("签到码无效或活动未开放");
+        // 查找当前用户的报名
+        ComActivitySignup signup = signupService.lambdaQuery()
+                .eq(ComActivitySignup::getActivityId, activity.getActivityId())
+                .eq(ComActivitySignup::getUserId, getUserId())
+                .one();
+        if (signup == null) return error("您未报名该活动");
+        if ("已签到".equals(signup.getAttendStatus())) return error("已签到，无需重复");
+        // 签到
+        signup.setAttendStatus("已签到");
+        signup.setSigninTime(new java.util.Date());
+        signup.setSigninMethod("签到码");
+        signupService.updateById(signup);
+        return success("签到成功 - " + activity.getTitle());
+    }
+
+    /** 管理员标记缺席 */
+    @PreAuthorize("@ss.hasPermi('com:activity:signup:list')")
+    @PutMapping("/signup/absent/{signupId}")
+    public AjaxResult markAbsent(@PathVariable Long signupId) {
+        ComActivitySignup s = signupService.getById(signupId);
+        if (s == null) return error("记录不存在");
+        s.setAttendStatus("已缺席");
+        signupService.updateById(s);
+        return success("已标记缺席");
     }
 
     /** 签到 */

@@ -35,6 +35,9 @@ public class ComActivitySignup extends BaseEntity {
     /** 拒绝原因 */
     private String rejectReason;
 
+    /** 考勤状态（已签到/已缺席） */
+    private String attendStatus;
+
     /** 签到时间 */
     private Date signinTime;
 

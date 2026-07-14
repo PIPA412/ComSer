@@ -44,3 +44,9 @@ export function batchRejectSignup(ids, reason) {
 export function exportSignupUrl(activityId) {
   return import.meta.env.VITE_APP_BASE_API + '/com/activity/signup/export/' + activityId
 }
+export function checkinActivity(data) {
+  return request({ url: '/com/activity/checkin', method: 'post', data })
+}
+export function markAbsent(signupId) {
+  return request({ url: '/com/activity/signup/absent/' + signupId, method: 'put' })
+}
