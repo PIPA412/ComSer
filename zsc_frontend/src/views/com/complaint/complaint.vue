@@ -77,15 +77,32 @@
             <span v-else>-</span>
           </template>
         </el-table-column>
-        <el-table-column label="处理反馈" prop="remark" show-overflow-tooltip />
+        <el-table-column label="操作" width="100">
+          <template #default="scope">
+            <el-button link type="primary" icon="View" @click="showProgress(scope.row)">进度</el-button>
+          </template>
+        </el-table-column>
       </el-table>
       <pagination v-show="total > 0" :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize" @pagination="getList" />
     </el-card>
+
+    <!-- 进度查询弹窗 -->
+    <el-dialog v-model="progressVisible" title="工单进度" width="500px" destroy-on-close>
+      <el-steps v-if="progressRow" direction="vertical" :active="progressActive" process-status="finish" finish-status="success">
+        <el-step title="已提交" :description="progressRow.createTime || '-'" />
+        <el-step title="已受理" :description="progressRow.acceptTime || '待受理'" :status="progressRow.acceptTime ? 'finish' : 'process'" />
+        <el-step title="处理完成" :description="progressRow.finishTime || '处理中'" :status="progressRow.finishTime ? 'finish' : 'wait'" />
+        <el-step title="已评价" :description="progressRow.rating ? progressRow.rating + '分' : '待评价'" :status="progressRow.rating ? 'finish' : 'wait'" />
+      </el-steps>
+      <template #footer>
+        <el-button @click="progressVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup name="ComplaintSubmit">
-import { ref, reactive, getCurrentInstance } from 'vue'
+import { ref, reactive, computed, getCurrentInstance } from 'vue'
 import { ElMessage } from 'element-plus'
 import { WarningFilled, List, Promotion } from '@element-plus/icons-vue'
 import { addComplaint, listMyComplaint, rateComplaint } from '@/api/com/complaint'
@@ -143,6 +160,21 @@ async function handleRate(row, val) {
   await rateComplaint({ complaintId: row.complaintId, rating: val })
   ElMessage.success('评价成功')
   getList()
+}
+
+const progressVisible = ref(false)
+const progressRow = ref(null)
+const progressActive = computed(() => {
+  if (!progressRow.value) return 0
+  if (progressRow.value.rating) return 4
+  if (progressRow.value.finishTime) return 3
+  if (progressRow.value.acceptTime) return 2
+  return 1
+})
+
+function showProgress(row) {
+  progressRow.value = row
+  progressVisible.value = true
 }
 
 function resetForm() {
