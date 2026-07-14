@@ -49,8 +49,20 @@
         <div class="card-header">
           <el-icon :size="18"><List /></el-icon>
           <span>我的投诉记录</span>
+          <el-badge v-if="unratedCount" :value="unratedCount" type="danger" style="margin-left:8px" />
         </div>
       </template>
+      <el-alert
+        v-if="unratedCount"
+        type="warning"
+        :closable="false"
+        show-icon
+        style="margin-bottom:12px"
+      >
+        <template #title>
+          您有 <strong>{{ unratedCount }}</strong> 条已完成的投诉待评价，快去评分吧！
+        </template>
+      </el-alert>
       <el-table v-loading="loading" :data="list" stripe>
         <el-table-column label="标题" prop="title" show-overflow-tooltip />
         <el-table-column label="紧急" prop="urgency" width="80">
@@ -87,13 +99,22 @@
     </el-card>
 
     <!-- 进度查询弹窗 -->
-    <el-dialog v-model="progressVisible" title="工单进度" width="500px" destroy-on-close>
-      <el-steps v-if="progressRow" direction="vertical" :active="progressActive" process-status="finish" finish-status="success">
-        <el-step title="已提交" :description="progressRow.createTime || '-'" />
-        <el-step title="已受理" :description="progressRow.acceptTime || '待受理'" :status="progressRow.acceptTime ? 'finish' : 'process'" />
-        <el-step title="处理完成" :description="progressRow.finishTime || '处理中'" :status="progressRow.finishTime ? 'finish' : 'wait'" />
-        <el-step title="已评价" :description="progressRow.rating ? progressRow.rating + '分' : '待评价'" :status="progressRow.rating ? 'finish' : 'wait'" />
-      </el-steps>
+    <el-dialog v-model="progressVisible" title="工单进度" width="550px" destroy-on-close>
+      <template v-if="progressRow">
+        <el-steps direction="vertical" :active="progressActive" process-status="finish" finish-status="success">
+          <el-step title="已提交" :description="progressRow.createTime || '-'" />
+          <el-step v-if="progressRow.acceptTime" title="已受理" :description="progressRow.acceptTime" status="finish" />
+          <el-step v-for="fb in progressFeedbacks" :key="'fb-' + fb.feedbackId" title="处理更新" :description="(fb.description || '') + ' — ' + (fb.createBy || '')" />
+          <el-step v-if="progressRow.finishTime" title="处理完成" :description="progressRow.finishTime" status="finish" />
+          <el-step v-if="!progressRow.finishTime" title="处理完成" description="处理中..." status="wait" />
+          <el-step v-if="progressRow.rating" :title="'已评价（' + progressRow.rating + '分）'" description="感谢您的评价" status="finish" />
+          <el-step v-else-if="progressRow.finishTime" title="待评价" description="请为本次服务评分">
+            <template #description>
+              <el-rate v-model="rateVal" :max="5" @change="(v) => handleRate(progressRow, v)" style="margin-top:4px" />
+            </template>
+          </el-step>
+        </el-steps>
+      </template>
       <template #footer>
         <el-button @click="progressVisible = false">关闭</el-button>
       </template>
@@ -105,7 +126,7 @@
 import { ref, reactive, computed, getCurrentInstance } from 'vue'
 import { ElMessage } from 'element-plus'
 import { WarningFilled, List, Promotion } from '@element-plus/icons-vue'
-import { addComplaint, listMyComplaint, rateComplaint } from '@/api/com/complaint'
+import { addComplaint, listMyComplaint, rateComplaint, listComplaintFeedback } from '@/api/com/complaint'
 
 const { proxy } = getCurrentInstance()
 
@@ -128,6 +149,8 @@ const loading = ref(false)
 const list = ref([])
 const total = ref(0)
 const queryParams = reactive({ pageNum: 1, pageSize: 10 })
+
+const unratedCount = computed(() => list.value.filter(r => r.status === '已完成' && !r.rating).length)
 
 function statusTag(status) {
   return { '待受理': 'warning', '处理中': 'primary', '已完成': 'success' }[status] || 'info'
@@ -164,17 +187,25 @@ async function handleRate(row, val) {
 
 const progressVisible = ref(false)
 const progressRow = ref(null)
+const progressFeedbacks = ref([])
+const rateVal = ref(0)
 const progressActive = computed(() => {
   if (!progressRow.value) return 0
-  if (progressRow.value.rating) return 4
-  if (progressRow.value.finishTime) return 3
-  if (progressRow.value.acceptTime) return 2
-  return 1
+  let steps = 1 // 已提交
+  if (progressRow.value.acceptTime) steps++
+  steps += progressFeedbacks.value.length
+  if (progressRow.value.finishTime) steps++
+  if (progressRow.value.rating) steps++
+  return steps
 })
 
-function showProgress(row) {
+async function showProgress(row) {
   progressRow.value = row
   progressVisible.value = true
+  try {
+    const res = await listComplaintFeedback({ complaintId: row.complaintId })
+    progressFeedbacks.value = res.rows || []
+  } catch { progressFeedbacks.value = [] }
 }
 
 function resetForm() {

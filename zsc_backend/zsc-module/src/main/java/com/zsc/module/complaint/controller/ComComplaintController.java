@@ -128,7 +128,7 @@ public class ComComplaintController extends BaseController {
     @PostMapping("/feedback")
     public AjaxResult feedbackAdd(@RequestBody ComComplaintFeedback feedback) {
         feedback.setCreateBy(getUsername());
-        // TODO: 更新投诉状态
+        feedback.setCreateTime(new java.util.Date());
         return toAjax(feedbackService.save(feedback));
     }
 }

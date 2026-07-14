@@ -55,6 +55,7 @@
         <template #default="scope">
           <el-button link type="primary" icon="View" @click="handleDetail(scope.row)">详情</el-button>
           <el-button v-if="scope.row.status === '待受理'" link type="primary" icon="Check" @click="handleAccept(scope.row)" v-hasPermi="['com:complaint:accept']">受理</el-button>
+          <el-button v-if="scope.row.status === '处理中'" link type="warning" icon="Edit" @click="openProgressDialog(scope.row)" v-hasPermi="['com:complaint:feedback:add']">更新</el-button>
           <el-button v-if="scope.row.status === '处理中'" link type="success" icon="CircleCheck" @click="openFinishDialog(scope.row)" v-hasPermi="['com:complaint:finish']">完成</el-button>
           <el-button link type="danger" icon="Delete" @click="handleDelete(scope.row)" v-hasPermi="['com:complaint:remove']">删除</el-button>
         </template>
@@ -72,6 +73,19 @@
       <template #footer>
         <el-button @click="finishVisible = false">取消</el-button>
         <el-button type="success" :loading="finishing" @click="handleFinish">确认完成</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 进度更新弹窗 -->
+    <el-dialog v-model="progressUpdateVisible" title="进度更新" width="500px" destroy-on-close>
+      <el-form ref="progressFormRef" :model="progressForm" :rules="progressRules" label-width="80px">
+        <el-form-item label="进度说明" prop="description">
+          <el-input v-model="progressForm.description" type="textarea" :rows="4" placeholder="填写当前处理进展..." maxlength="500" show-word-limit />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="progressUpdateVisible = false">取消</el-button>
+        <el-button type="primary" :loading="updating" @click="submitProgress">提交更新</el-button>
       </template>
     </el-dialog>
 
@@ -202,6 +216,40 @@ async function handleFinish() {
       finishVisible.value = false
       getList()
     } finally { finishing.value = false }
+  })
+}
+
+// ======================== 进度更新弹窗 ========================
+const progressUpdateVisible = ref(false)
+const updating = ref(false)
+const progressFormRef = ref(null)
+const progressRow = ref(null)
+const progressForm = reactive({ description: '' })
+const progressRules = {
+  description: [
+    { required: true, message: '请填写进度说明', trigger: 'blur' },
+    { min: 2, max: 500, message: '长度 2-500 字', trigger: 'blur' }
+  ]
+}
+
+function openProgressDialog(row) {
+  progressRow.value = row
+  progressForm.description = ''
+  progressUpdateVisible.value = true
+}
+
+async function submitProgress() {
+  await progressFormRef.value.validate(async (valid) => {
+    if (!valid) return
+    updating.value = true
+    try {
+      await addComplaintFeedback({
+        complaintId: progressRow.value.complaintId,
+        description: progressForm.description
+      })
+      ElMessage.success('进度已更新')
+      progressUpdateVisible.value = false
+    } finally { updating.value = false }
   })
 }
 
