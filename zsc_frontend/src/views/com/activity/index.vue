@@ -61,6 +61,7 @@
           <el-button v-if="scope.row.status === '草稿' || scope.row.status === '待审核'" link type="success" icon="Promotion" @click="handlePublish(scope.row)" v-hasPermi="['com:activity:edit']">发布</el-button>
           <el-button v-if="scope.row.status !== '已结束' && scope.row.status !== '已取消'" link type="primary" icon="Edit" @click="openEditDialog(scope.row)" v-hasPermi="['com:activity:edit']">修改</el-button>
           <el-button v-if="scope.row.status === '报名中' || scope.row.status === '进行中'" link type="warning" icon="CircleClose" @click="handleFinish(scope.row)" v-hasPermi="['com:activity:edit']">结束</el-button>
+          <el-button link :type="scope.row.isTop ? 'warning' : 'info'" :icon="scope.row.isTop ? 'Top' : 'Top'" @click="handleToggleTop(scope.row)" v-hasPermi="['com:activity:edit']">{{ scope.row.isTop ? '取消置顶' : '置顶' }}</el-button>
           <el-button v-if="scope.row.status !== '已结束' && scope.row.status !== '已取消'" link type="danger" icon="Delete" @click="handleCancel(scope.row)" v-hasPermi="['com:activity:remove']">取消</el-button>
         </template>
       </el-table-column>
@@ -320,6 +321,12 @@ async function handleFinish(row) {
     ElMessage.success('已结束')
     getList()
   })
+}
+
+async function handleToggleTop(row) {
+  await request({ url: '/com/activity/top', method: 'put', data: { activityId: row.activityId } })
+  ElMessage.success(row.isTop ? '已取消置顶' : '已置顶')
+  getList()
 }
 
 async function handleCancel(row) {

@@ -43,6 +43,7 @@ public class ComActivityController extends BaseController {
                 .like(activity.getTitle() != null, ComActivity::getTitle, activity.getTitle())
                 .eq(activity.getActivityType() != null, ComActivity::getActivityType, activity.getActivityType())
                 .eq(activity.getStatus() != null, ComActivity::getStatus, activity.getStatus())
+                .orderByDesc(ComActivity::getIsTop)
                 .orderByDesc(ComActivity::getCreateTime)
                 .page(page).getRecords();
         return getDataTable(list);
@@ -87,6 +88,17 @@ public class ComActivityController extends BaseController {
         return toAjax(activityService.updateById(db));
     }
 
+    /** 置顶/取消置顶 */
+    @PreAuthorize("@ss.hasPermi('com:activity:edit')")
+    @PutMapping("/top")
+    public AjaxResult toggleTop(@RequestBody ComActivity activity) {
+        ComActivity db = activityService.getById(activity.getActivityId());
+        if (db == null) return error("活动不存在");
+        db.setIsTop(db.getIsTop() != null && db.getIsTop() == 1 ? 0 : 1);
+        activityService.updateById(db);
+        return success(db.getIsTop() == 1 ? "已置顶" : "已取消置顶");
+    }
+
     /** 取消活动 */
     @PreAuthorize("@ss.hasPermi('com:activity:edit')")
     @PutMapping("/cancel")
@@ -119,6 +131,7 @@ public class ComActivityController extends BaseController {
                 .eq(ComActivity::getStatus, "报名中")
                 .like(activity.getTitle() != null, ComActivity::getTitle, activity.getTitle())
                 .eq(activity.getActivityType() != null, ComActivity::getActivityType, activity.getActivityType())
+                .orderByDesc(ComActivity::getIsTop)
                 .orderByDesc(ComActivity::getCreateTime)
                 .page(page).getRecords();
         return getDataTable(list);

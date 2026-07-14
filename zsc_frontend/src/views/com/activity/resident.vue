@@ -15,6 +15,7 @@
         <el-card shadow="hover" :body-style="{ padding: '16px' }">
           <template #header>
             <div class="card-title">
+              <el-tag v-if="item.isTop" type="warning" effect="dark" size="small" style="margin-right:6px">置顶</el-tag>
               <el-tag :type="typeTag(item.activityType)" size="small" style="margin-right:8px">{{ item.activityType }}</el-tag>
               <span>{{ item.title }}</span>
             </div>

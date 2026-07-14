@@ -64,6 +64,9 @@ public class ComActivity extends BaseEntity {
     /** 状态（草稿/待审核/报名中/进行中/已结束/已取消） */
     private String status;
 
+    /** 是否置顶 */
+    private Integer isTop;
+
     /** 活动回顾 */
     private String review;
 
