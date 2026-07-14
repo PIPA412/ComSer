@@ -104,6 +104,19 @@ public class ComActivityController extends BaseController {
         return toAjax(activityService.removeByIds(java.util.Arrays.asList(activityIds)));
     }
 
+    // ==================== 居民浏览已发布活动 ====================
+    @GetMapping("/published")
+    public TableDataInfo published(ComActivity activity) {
+        Page<ComActivity> page = startPage();
+        List<ComActivity> list = activityService.lambdaQuery()
+                .eq(ComActivity::getStatus, "报名中")
+                .like(activity.getTitle() != null, ComActivity::getTitle, activity.getTitle())
+                .eq(activity.getActivityType() != null, ComActivity::getActivityType, activity.getActivityType())
+                .orderByDesc(ComActivity::getCreateTime)
+                .page(page).getRecords();
+        return getDataTable(list);
+    }
+
     // ==================== 活动报名 ====================
     @PreAuthorize("@ss.hasPermi('com:activity:signup:list')")
     @GetMapping("/signup/list")
@@ -119,10 +132,60 @@ public class ComActivityController extends BaseController {
     @PreAuthorize("@ss.hasPermi('com:activity:signup:add')")
     @PostMapping("/signup")
     public AjaxResult signupAdd(@RequestBody ComActivitySignup signup) {
+        // 校验活动状态
+        ComActivity activity = activityService.getById(signup.getActivityId());
+        if (activity == null) return error("活动不存在");
+        if (!"报名中".equals(activity.getStatus())) return error("该活动暂不接受报名");
+        // 校验重复报名
+        long count = signupService.lambdaQuery()
+                .eq(ComActivitySignup::getActivityId, signup.getActivityId())
+                .eq(ComActivitySignup::getUserId, getUserId())
+                .count();
+        if (count > 0) return error("您已报名该活动");
+        // 校验人数上限
+        if (activity.getMaxParticipants() != null && activity.getMaxParticipants() > 0
+                && activity.getActualParticipants() >= activity.getMaxParticipants()) {
+            return error("报名人数已满");
+        }
+        // 报名
+        signup.setUserId(getUserId());
         signup.setCreateBy(getUsername());
+        signup.setCreateTime(new java.util.Date());
         signup.setStatus("已报名");
-        // TODO: 校验报名人数上限
-        return toAjax(signupService.save(signup));
+        signupService.save(signup);
+        // 更新实际人数
+        activity.setActualParticipants((activity.getActualParticipants() == null ? 0 : activity.getActualParticipants()) + 1);
+        activityService.updateById(activity);
+        return success("报名成功");
+    }
+
+    /** 取消报名 */
+    @DeleteMapping("/signup/{activityId}")
+    public AjaxResult signupCancel(@PathVariable Long activityId) {
+        ComActivitySignup signup = signupService.lambdaQuery()
+                .eq(ComActivitySignup::getActivityId, activityId)
+                .eq(ComActivitySignup::getUserId, getUserId())
+                .one();
+        if (signup == null) return error("未找到报名记录");
+        signupService.removeById(signup.getSignupId());
+        // 更新实际人数
+        ComActivity activity = activityService.getById(activityId);
+        if (activity != null) {
+            int cur = activity.getActualParticipants() == null ? 0 : activity.getActualParticipants();
+            activity.setActualParticipants(Math.max(0, cur - 1));
+            activityService.updateById(activity);
+        }
+        return success("已取消报名");
+    }
+
+    /** 我的报名 */
+    @GetMapping("/my-signups")
+    public AjaxResult mySignups() {
+        List<ComActivitySignup> list = signupService.lambdaQuery()
+                .eq(ComActivitySignup::getUserId, getUserId())
+                .orderByDesc(ComActivitySignup::getCreateTime)
+                .list();
+        return success(list);
     }
 
     /** 签到 */

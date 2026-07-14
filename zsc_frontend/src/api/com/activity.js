@@ -17,11 +17,20 @@ export function delActivity(activityIds) {
 }
 
 // 活动报名
+export function listPublished(query) {
+  return request({ url: '/com/activity/published', method: 'get', params: query })
+}
 export function listSignup(query) {
   return request({ url: '/com/activity/signup/list', method: 'get', params: query })
 }
 export function addSignup(data) {
   return request({ url: '/com/activity/signup', method: 'post', data })
+}
+export function cancelSignup(activityId) {
+  return request({ url: '/com/activity/signup/' + activityId, method: 'delete' })
+}
+export function mySignups() {
+  return request({ url: '/com/activity/my-signups', method: 'get' })
 }
 export function signin(signupId) {
   return request({ url: '/com/activity/signin/' + signupId, method: 'put' })
