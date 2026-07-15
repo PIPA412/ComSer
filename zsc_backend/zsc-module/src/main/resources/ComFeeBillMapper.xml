@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zsc.module.fee.mapper.ComFeeBillMapper">
+    <select id="selectStatistics" resultType="java.util.Map">
+        SELECT
+        COUNT(*) as totalBills,
+        COALESCE(SUM(CASE WHEN status = '已缴' THEN amount ELSE 0 END), 0) as paidAmount,
+        COALESCE(SUM(CASE WHEN status != '已缴' THEN amount ELSE 0 END), 0) as unpaidAmount
+        FROM com_fee_bill
+        <where>
+            <if test="period != null and period != ''">
+                bill_period = #{period}
+            </if>
+        </where>
+    </select>
+</mapper>
