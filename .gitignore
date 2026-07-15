@@ -1,0 +1,19 @@
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Logs
+logs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker/mysql/data/
+docker/logs/
+docker/upload/
+.env
