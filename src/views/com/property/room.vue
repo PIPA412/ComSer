@@ -110,6 +110,9 @@
 import { listRoom, getRoom, addRoom, updateRoom, delRoom, getAllBuildings, getUnitByBuilding } from '@/api/com/property'
 
 const { proxy } = getCurrentInstance()
+const { sys_normal_disable } = proxy.useDict('sys_normal_disable')
+const queryRef = ref(null)
+const roomRef = ref(null)
 const roomList = ref([])
 const open = ref(false)
 const loading = ref(true)

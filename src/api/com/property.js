@@ -10,6 +10,9 @@ export function getBuilding(buildingId) {
 export function addBuilding(data) {
   return request({ url: '/com/property/building', method: 'post', data })
 }
+export function addBuildingWithRooms(data) {
+  return request({ url: '/com/property/building/withRooms', method: 'post', data })
+}
 export function updateBuilding(data) {
   return request({ url: '/com/property/building', method: 'put', data })
 }
@@ -92,6 +95,9 @@ export function getUnitByBuilding(buildingId) {
 export function getRoomByUnit(unitId) {
   return request({ url: '/com/property/room/byUnit/' + unitId, method: 'get' })
 }
+export function getRoomByBuilding(buildingId) {
+  return request({ url: '/com/property/room/byBuilding/' + buildingId, method: 'get' })
+}
 
 // ==================== 详情查询（含关联数据） ====================
 export function getOwnerDetail(ownerId) {
@@ -100,15 +106,39 @@ export function getOwnerDetail(ownerId) {
 export function getRoomDetail(roomId) {
   return request({ url: '/com/property/room/detail/' + roomId, method: 'get' })
 }
+export function getRoomResidents(roomId) {
+  return request({ url: '/com/property/room/' + roomId + '/residents', method: 'get' })
+}
 
 // ==================== 入住登记 ====================
 export function ownerCheckIn(data) {
   return request({ url: '/com/property/owner/checkIn', method: 'post', data })
 }
 
+// ==================== 搬离登记 ====================
+export function ownerCheckOut(data) {
+  return request({ url: '/com/property/owner/checkOut', method: 'post', data })
+}
+
+// ==================== 身份变更 ====================
+export function ownerChangeRole(data) {
+  return request({ url: '/com/property/owner/changeRole', method: 'put', data })
+}
+
 // ==================== 绑定额外API ====================
 export function bindOwnerRoom(data) {
   return request({ url: '/com/property/ownerroom/bind', method: 'post', data })
+}
+
+// ==================== 变更记录 ====================
+export function getChangeLogByOwner(ownerId) {
+  return request({ url: '/com/property/changeLog/byOwner/' + ownerId, method: 'get' })
+}
+export function getChangeLogByRoom(roomId) {
+  return request({ url: '/com/property/changeLog/byRoom/' + roomId, method: 'get' })
+}
+export function listChangeLog(query) {
+  return request({ url: '/com/property/changeLog/list', method: 'get', params: query })
 }
 
 // ==================== 房产概览 ====================
@@ -117,4 +147,7 @@ export function getPropertyTree() {
 }
 export function getPropertyStatistics() {
   return request({ url: '/com/property/statistics', method: 'get' })
+}
+export function getOccupancyRate() {
+  return request({ url: '/com/property/statistics/occupancyRate', method: 'get' })
 }

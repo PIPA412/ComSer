@@ -85,6 +85,8 @@
 import { listUnit, getUnit, addUnit, updateUnit, delUnit, getAllBuildings } from '@/api/com/property'
 
 const { proxy } = getCurrentInstance()
+const queryRef = ref(null)
+const unitRef = ref(null)
 const unitList = ref([])
 const open = ref(false)
 const loading = ref(true)
