@@ -10,7 +10,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
- * 业主/住户信息 com_owner
+ * 居民信息 com_owner
  *
  * @author zsc
  */
@@ -46,7 +46,7 @@ public class ComOwner extends BaseEntity {
     @Size(max = 100, message = "备用联系方式不能超过100个字符")
     private String backupContact;
 
-    /** 住户类型（业主/租户/家属） */
+    /** 住户类型（户主/家属/租客） */
     @NotBlank(message = "住户类型不能为空")
     @Size(max = 20, message = "住户类型不能超过20个字符")
     private String ownerType;

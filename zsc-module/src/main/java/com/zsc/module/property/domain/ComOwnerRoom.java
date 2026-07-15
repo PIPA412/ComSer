@@ -12,7 +12,7 @@ import lombok.EqualsAndHashCode;
 import java.util.Date;
 
 /**
- * 业主房屋关联 com_owner_room
+ * 居民房屋居住登记关联 com_owner_room
  *
  * @author zsc
  */
@@ -34,7 +34,7 @@ public class ComOwnerRoom extends BaseEntity {
     @NotNull(message = "房屋ID不能为空")
     private Long roomId;
 
-    /** 关联类型（产权人/租户/家属） */
+    /** 身份类型（户主/家属/租客） */
     @Size(max = 20, message = "关联类型不能超过20个字符")
     private String relationType;
 

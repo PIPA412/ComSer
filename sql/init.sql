@@ -547,56 +547,84 @@ CREATE TABLE `com_owner` (
   `id_card`        varchar(18)  DEFAULT ''  COMMENT '身份证号',
   `phone`          varchar(11)  DEFAULT ''  COMMENT '手机号',
   `backup_contact` varchar(100) DEFAULT ''  COMMENT '备用联系方式',
-  `owner_type`     varchar(20)  DEFAULT ''  COMMENT '住户类型（业主/租户/家属）',
+  `owner_type`     varchar(20)  DEFAULT ''  COMMENT '住户类型（户主/租客/家属）',
   `status`         char(1)      DEFAULT '0' COMMENT '状态（0正常 1停用）',
   `create_by`      varchar(64)  DEFAULT ''  COMMENT '创建者',
   `create_time`    datetime     DEFAULT NULL COMMENT '创建时间',
   `update_by`      varchar(64)  DEFAULT ''  COMMENT '更新者',
   `update_time`    datetime     DEFAULT NULL COMMENT '更新时间',
   `remark`         varchar(500) DEFAULT NULL COMMENT '备注',
-  PRIMARY KEY (`owner_id`)
+  PRIMARY KEY (`owner_id`),
+  UNIQUE INDEX `uk_id_card` (`id_card`),
+  UNIQUE INDEX `uk_phone` (`phone`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='业主/住户信息';
 
 -- 业主房屋关联
 DROP TABLE IF EXISTS `com_owner_room`;
 CREATE TABLE `com_owner_room` (
-  `id`            bigint NOT NULL AUTO_INCREMENT COMMENT '关联ID',
-  `owner_id`      bigint       DEFAULT NULL COMMENT '业主ID',
+  `id`             bigint NOT NULL AUTO_INCREMENT COMMENT '关联ID',
+  `owner_id`       bigint       DEFAULT NULL COMMENT '业主ID',
+  `room_id`        bigint       DEFAULT NULL COMMENT '房屋ID',
+  `relation_type`  varchar(20)  DEFAULT ''  COMMENT '关联类型（户主/租客/家属）',
+  `check_in_date`  date         DEFAULT NULL COMMENT '入住日期',
+  `check_out_date` date         DEFAULT NULL COMMENT '搬出日期',
+  `is_current`     char(1)      DEFAULT '1' COMMENT '是否当前有效',
+  `create_by`      varchar(64)  DEFAULT ''  COMMENT '创建者',
+  `create_time`    datetime     DEFAULT NULL COMMENT '创建时间',
+  `update_by`      varchar(64)  DEFAULT ''  COMMENT '更新者',
+  `update_time`    datetime     DEFAULT NULL COMMENT '更新时间',
+  `remark`         varchar(500) DEFAULT NULL COMMENT '备注',
+  PRIMARY KEY (`id`),
+  INDEX `idx_owner_id` (`owner_id`),
+  INDEX `idx_room_id` (`room_id`),
+  INDEX `idx_is_current` (`is_current`),
+  INDEX `idx_room_current` (`room_id`, `is_current`),
+  INDEX `idx_relation_type` (`relation_type`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='业主房屋关联';
+
+-- 居住变更记录
+DROP TABLE IF EXISTS `com_residence_change_log`;
+CREATE TABLE `com_residence_change_log` (
+  `log_id`          bigint       NOT NULL AUTO_INCREMENT COMMENT '日志ID',
+  `owner_room_id`   bigint       DEFAULT NULL COMMENT '关联的居住登记ID（com_owner_room.id）',
+  `owner_id`        bigint       DEFAULT NULL COMMENT '居民ID',
+  `room_id`         bigint       DEFAULT NULL COMMENT '房屋ID',
+  `change_type`     varchar(20)  DEFAULT ''  COMMENT '变更类型（登记入住/搬离/身份变更）',
+  `before_content`  text         COMMENT '变更前内容（JSON）',
+  `after_content`   text         COMMENT '变更后内容（JSON）',
+  `create_by`       varchar(64)  DEFAULT ''  COMMENT '操作人',
+  `create_time`     datetime     DEFAULT NULL COMMENT '操作时间',
+  PRIMARY KEY (`log_id`),
+  INDEX `idx_owner_id` (`owner_id`),
+  INDEX `idx_room_id` (`room_id`),
+  INDEX `idx_create_time` (`create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='居住变更记录';
+
+-- 报修管理
+DROP TABLE IF EXISTS `com_repair`;
+CREATE TABLE `com_repair` (
+  `repair_id`     bigint NOT NULL AUTO_INCREMENT COMMENT '报修ID',
+  `repair_no`     varchar(32)  DEFAULT ''  COMMENT '报修编号',
+  `user_id`       bigint       DEFAULT NULL COMMENT '报修人ID',
   `room_id`       bigint       DEFAULT NULL COMMENT '房屋ID',
-  `relation_type` varchar(20)  DEFAULT ''  COMMENT '关联类型（产权人/租户/家属）',
-  `check_in_date` date         DEFAULT NULL COMMENT '入住日期',
-  `check_out_date` date        DEFAULT NULL COMMENT '搬出日期',
-  `is_current`    char(1)      DEFAULT '1' COMMENT '是否当前有效',
+  `building_name` varchar(100) DEFAULT ''  COMMENT '楼栋名称（提交时保存，方便列表展示）',
+  `room_number`   varchar(20)  DEFAULT ''  COMMENT '门牌号（提交时保存，方便列表展示）',
+  `repair_type`   varchar(50)  DEFAULT ''  COMMENT '维修类型',
+  `urgency`       varchar(10)  DEFAULT ''  COMMENT '紧急程度（一般/紧急/非常紧急）',
+  `description`   text         COMMENT '报修描述',
+  `media_urls`    text         COMMENT '图片/视频地址（JSON数组）',
+  `handle_note`   varchar(500) DEFAULT ''  COMMENT '处理备注',
+  `status`        varchar(20)  DEFAULT '待处理' COMMENT '状态（待处理/处理中/已完成/已取消）',
+  `assignee_id`   bigint       DEFAULT NULL COMMENT '受理人ID',
+  `accept_time`   datetime     DEFAULT NULL COMMENT '受理时间',
+  `finish_time`   datetime     DEFAULT NULL COMMENT '完成时间',
+  `rating`        int          DEFAULT NULL COMMENT '评价（1-5星）',
+  `feedback`      varchar(500) DEFAULT NULL COMMENT '评价内容',
   `create_by`     varchar(64)  DEFAULT ''  COMMENT '创建者',
   `create_time`   datetime     DEFAULT NULL COMMENT '创建时间',
   `update_by`     varchar(64)  DEFAULT ''  COMMENT '更新者',
   `update_time`   datetime     DEFAULT NULL COMMENT '更新时间',
   `remark`        varchar(500) DEFAULT NULL COMMENT '备注',
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='业主房屋关联';
-
--- 报修管理
-DROP TABLE IF EXISTS `com_repair`;
-CREATE TABLE `com_repair` (
-  `repair_id`    bigint NOT NULL AUTO_INCREMENT COMMENT '报修ID',
-  `repair_no`    varchar(32)  DEFAULT ''  COMMENT '报修编号',
-  `user_id`      bigint       DEFAULT NULL COMMENT '报修人ID',
-  `room_id`      bigint       DEFAULT NULL COMMENT '房屋ID',
-  `repair_type`  varchar(50)  DEFAULT ''  COMMENT '维修类型',
-  `urgency`      varchar(10)  DEFAULT ''  COMMENT '紧急程度（一般/紧急/非常紧急）',
-  `description`  text         COMMENT '报修描述',
-  `media_urls`   text         COMMENT '图片/视频地址（JSON数组）',
-  `status`       varchar(20)  DEFAULT '待受理' COMMENT '状态',
-  `assignee_id`  bigint       DEFAULT NULL COMMENT '受理人ID',
-  `accept_time`  datetime     DEFAULT NULL COMMENT '受理时间',
-  `finish_time`  datetime     DEFAULT NULL COMMENT '完成时间',
-  `rating`       int          DEFAULT NULL COMMENT '评价（1-5星）',
-  `feedback`     varchar(500) DEFAULT NULL COMMENT '评价内容',
-  `create_by`    varchar(64)  DEFAULT ''  COMMENT '创建者',
-  `create_time`  datetime     DEFAULT NULL COMMENT '创建时间',
-  `update_by`    varchar(64)  DEFAULT ''  COMMENT '更新者',
-  `update_time`  datetime     DEFAULT NULL COMMENT '更新时间',
-  `remark`       varchar(500) DEFAULT NULL COMMENT '备注',
   PRIMARY KEY (`repair_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='报修单';
 
@@ -1085,7 +1113,7 @@ INSERT INTO `sys_menu` VALUES
 
 -- 14.2 社区服务模块（顶级菜单，order_num=1~9）
 INSERT INTO `sys_menu` VALUES
-(101,'房产管理',  0, 1, 'property',     'com/property/building',    NULL, '', 1, 0, 'C', '0', '0', 'com:property:building:list',        'tree',      'admin', NOW(), '', NULL, ''),
+(101,'房产管理',  0, 1, 'property',     'com/property/index',        NULL, '', 1, 0, 'C', '0', '0', 'com:property:building:list',        'tree',      'admin', NOW(), '', NULL, ''),
 (102,'报修管理',  0, 2, 'repair',       'com/repair/index',         NULL, '', 1, 0, 'C', '0', '0', 'com:repair:list',                   'tool',      'admin', NOW(), '', NULL, ''),
 (103,'费用管理',  0, 3, 'fee',          'com/fee/index',            NULL, '', 1, 0, 'C', '0', '0', 'com:fee:item:list',                 'money',     'admin', NOW(), '', NULL, ''),
 (104,'停车管理',  0, 4, 'parking',      'com/parking/index',        NULL, '', 1, 0, 'C', '0', '0', 'com:parking:spot:list',             'cascader',  'admin', NOW(), '', NULL, ''),
@@ -1118,7 +1146,11 @@ INSERT INTO `sys_menu` VALUES
 (10119,'关联修改', 101, 19, '', NULL, NULL, '', 1, 0, 'F', '0', '0', 'com:property:ownerroom:edit',          '#', 'admin', NOW(), '', NULL, ''),
 (10120,'关联删除', 101, 20, '', NULL, NULL, '', 1, 0, 'F', '0', '0', 'com:property:ownerroom:remove',        '#', 'admin', NOW(), '', NULL, ''),
 (10121,'居民导出', 101, 21, '', NULL, NULL, '', 1, 0, 'F', '0', '0', 'com:property:owner:export',            '#', 'admin', NOW(), '', NULL, ''),
-(10122,'居民导入', 101, 22, '', NULL, NULL, '', 1, 0, 'F', '0', '0', 'com:property:owner:import',            '#', 'admin', NOW(), '', NULL, '');
+(10122,'居民导入',     101, 22, '', NULL, NULL, '', 1, 0, 'F', '0', '0', 'com:property:owner:import',            '#', 'admin', NOW(), '', NULL, ''),
+(10123,'搬离登记',     101, 23, '', NULL, NULL, '', 1, 0, 'F', '0', '0', 'com:property:owner:checkOut',   '#', 'admin', NOW(), '', NULL, ''),
+(10124,'身份变更',     101, 24, '', NULL, NULL, '', 1, 0, 'F', '0', '0', 'com:property:owner:changeRole', '#', 'admin', NOW(), '', NULL, ''),
+(10125,'变更记录查询', 101, 25, '', NULL, NULL, '', 1, 0, 'F', '0', '0', 'com:property:changelog:list',   '#', 'admin', NOW(), '', NULL, ''),
+(10126,'居民详情',     101, 26, '', NULL, NULL, '', 1, 0, 'F', '0', '0', 'com:property:owner:query',      '#', 'admin', NOW(), '', NULL, '');
 
 -- 14.4 报修管理 - 按钮级权限 (parent: menu_id=102)
 INSERT INTO `sys_menu` VALUES
@@ -1167,7 +1199,8 @@ INSERT INTO `sys_menu` VALUES
 (10503,'访客审批',     105, 3, '', NULL, NULL, '', 1, 0, 'F', '0', '0', 'com:visitor:approve',      '#', 'admin', NOW(), '', NULL, ''),
 (10504,'访客签离',     105, 4, '', NULL, NULL, '', 1, 0, 'F', '0', '0', 'com:visitor:checkout',     '#', 'admin', NOW(), '', NULL, ''),
 (10505,'访客删除',     105, 5, '', NULL, NULL, '', 1, 0, 'F', '0', '0', 'com:visitor:remove',       '#', 'admin', NOW(), '', NULL, ''),
-(10506,'通行记录查询', 105, 6, '', NULL, NULL, '', 1, 0, 'F', '0', '0', 'com:visitor:record:list',  '#', 'admin', NOW(), '', NULL, '');
+(10506,'通行记录查询', 105, 6, '', NULL, NULL, '', 1, 0, 'F', '0', '0', 'com:visitor:record:list',  '#', 'admin', NOW(), '', NULL, ''),
+(10507,'访客修改',     105, 7, '', NULL, NULL, '', 1, 0, 'F', '0', '0', 'com:visitor:edit',              '#', 'admin', NOW(), '', NULL, '');
 
 -- 14.8 信息发布 - 按钮级权限 (parent: menu_id=106)
 INSERT INTO `sys_menu` VALUES
@@ -1222,5 +1255,56 @@ INSERT INTO `sys_menu` VALUES
 INSERT INTO `sys_role_menu` SELECT 1, menu_id FROM `sys_menu`;
 INSERT INTO `sys_role_menu` SELECT 2, menu_id FROM `sys_menu` WHERE (menu_id <= 7 OR menu_id = 14) OR menu_id >= 101;
 INSERT INTO `sys_role_menu` SELECT 3, menu_id FROM `sys_menu` WHERE menu_id >= 101;
+
+-- ----------------------------
+-- 16. 居民角色(role_id=3)权限清理
+--     居民仅保留基本查询和自助操作，移除管理类权限
+-- ----------------------------
+
+-- 16a. 移除信息发布（公告管理）全部菜单
+DELETE FROM `sys_role_menu`
+WHERE `role_id` = 3
+  AND `menu_id` IN (106, 10601, 10602, 10603, 10604, 10605, 10606);
+
+-- 16b. 移除访客管理中的管理权限（审批/签离/删除/修改）
+DELETE FROM `sys_role_menu`
+WHERE `role_id` = 3
+  AND `menu_id` IN (10503, 10504, 10505, 10507);
+
+-- 16c. 移除房产管理顶部菜单(隐藏侧边栏)和管理类权限
+--     保留楼栋/单元/房屋查询权限，报修表单需要读取
+DELETE FROM `sys_role_menu`
+WHERE `role_id` = 3
+  AND `menu_id` IN (
+    SELECT `menu_id` FROM `sys_menu`
+    WHERE `menu_id` = 101
+       OR (`parent_id` = 101 AND `perms` IN (
+        'com:property:building:add', 'com:property:building:edit', 'com:property:building:remove',
+        'com:property:unit:add', 'com:property:unit:edit', 'com:property:unit:remove',
+        'com:property:room:add', 'com:property:room:edit', 'com:property:room:remove',
+        'com:property:owner:list', 'com:property:owner:add', 'com:property:owner:edit', 'com:property:owner:remove',
+        'com:property:owner:export', 'com:property:owner:import',
+        'com:property:ownerroom:list', 'com:property:ownerroom:add', 'com:property:ownerroom:edit', 'com:property:ownerroom:remove',
+        'com:property:owner:checkOut', 'com:property:owner:changeRole',
+        'com:property:changelog:list', 'com:property:owner:query'
+      ))
+  );
+
+-- 16d. 移除居民对报修管理的管理员权限（保留 query/add/rate/cancel）
+DELETE FROM `sys_role_menu`
+WHERE `role_id` = 3
+  AND `menu_id` IN (
+    SELECT `menu_id` FROM `sys_menu`
+    WHERE `parent_id` = 102
+      AND `perms` IN (
+        'com:repair:list',
+        'com:repair:edit',
+        'com:repair:remove',
+        'com:repair:assign',
+        'com:repair:finish',
+        'com:repair:record:list',
+        'com:repair:record:add'
+      )
+  );
 
 SET FOREIGN_KEY_CHECKS = 1;
