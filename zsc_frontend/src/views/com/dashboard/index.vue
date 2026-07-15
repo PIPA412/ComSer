@@ -19,25 +19,32 @@
       </div>
     </el-card>
 
-    <!-- 预警横幅 + 预警管理入口 -->
-    <div v-if="alerts.length > 0" style="margin-bottom:16px">
-      <el-alert
-        v-for="(a, i) in alerts.slice(0, 3)" :key="i"
-        :title="a.title" :type="a.type || 'warning'" show-icon closable
-        style="margin-bottom:8px"
-        @close="alerts.splice(i, 1)">
-        <template #action>
-          <el-button v-if="a.recordId" size="small" type="warning" @click="handleAlert(a.recordId)">标记已处理</el-button>
-        </template>
-      </el-alert>
-    </div>
-    <div style="text-align:right;margin-bottom:8px">
-      <el-button size="small" @click="showAlertRuleDialog">预警规则</el-button>
-      <el-button size="small" @click="showAlertRecordDialog">预警记录</el-button>
+    <!-- 预警区块 -->
+    <div class="alert-section">
+      <div v-if="alerts.length > 0" style="margin-bottom:8px">
+        <el-alert
+          v-for="(a, i) in alerts.slice(0, 3)" :key="i"
+          :title="a.title" :type="a.type || 'warning'" show-icon closable
+          style="margin-bottom:8px"
+          @close="alerts.splice(i, 1)">
+          <template #action>
+            <el-button v-if="a.recordId" size="small" type="warning" @click="handleAlert(a.recordId)">标记已处理</el-button>
+          </template>
+        </el-alert>
+      </div>
+      <el-empty v-if="!alerts.length" description="暂无待处理预警" :image-size="60" />
+      <div style="text-align:right;margin-bottom:8px">
+        <el-button size="small" @click="showAlertRuleDialog">预警规则</el-button>
+        <el-button size="small" @click="showAlertRecordDialog">预警记录</el-button>
+      </div>
     </div>
 
     <!-- 预警规则弹窗 -->
     <el-dialog title="预警规则" v-model="alertRuleVisible" width="700px" top="5vh" append-to-body :close-on-click-modal="false">
+      <template #header>
+        <span>预警规则</span>
+        <el-button size="small" type="primary" style="margin-left:12px" @click="showAddRuleDialog">新增规则</el-button>
+      </template>
       <el-table :data="alertRules" v-loading="ruleLoading" size="small" max-height="400" stripe>
         <el-table-column label="规则名称" prop="ruleName" min-width="130" />
         <el-table-column label="指标" prop="metricName" width="100" />
@@ -49,13 +56,49 @@
           <template #default="s"><el-tag :type="s.row.status === '0' ? 'success' : 'danger'" size="small">{{ s.row.status === '0' ? '启用' : '停用' }}</el-tag></template>
         </el-table-column>
         <el-table-column label="最近触发" prop="lastTriggerTime" width="150" />
-        <el-table-column label="操作" width="80">
+        <el-table-column label="操作" width="150">
           <template #default="s">
+            <el-button link type="primary" size="small" @click="showEditRuleDialog(s.row)">编辑</el-button>
             <el-button v-if="s.row.status === '0'" link type="warning" size="small" @click="toggleRule(s.row)">停用</el-button>
             <el-button v-else link type="success" size="small" @click="toggleRule(s.row)">启用</el-button>
+            <el-button link type="danger" size="small" @click="deleteRule(s.row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
+    </el-dialog>
+
+    <!-- 新增/编辑规则弹窗 -->
+    <el-dialog :title="ruleForm.ruleId ? '编辑规则' : '新增规则'" v-model="ruleFormVisible" width="500px" top="20vh" append-to-body :close-on-click-modal="false">
+      <el-form :model="ruleForm" label-width="90px" size="small">
+        <el-form-item label="规则名称">
+          <el-input v-model="ruleForm.ruleName" placeholder="如：收缴率过低" />
+        </el-form-item>
+        <el-form-item label="指标">
+          <el-select v-model="ruleForm.metricKey" placeholder="选择指标" style="width:100%">
+            <el-option label="当月收缴率" value="collection_rate" />
+            <el-option label="月度投诉量" value="complaint_monthly" />
+            <el-option label="报修超时率" value="repair_overdue_rate" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="指标名称">
+          <el-input v-model="ruleForm.metricName" placeholder="展示用名称" />
+        </el-form-item>
+        <el-form-item label="比较方式">
+          <el-select v-model="ruleForm.compareType" style="width:100%">
+            <el-option label="大于 (GT)" value="GT" />
+            <el-option label="小于 (LT)" value="LT" />
+            <el-option label="大于等于 (GTE)" value="GTE" />
+            <el-option label="小于等于 (LTE)" value="LTE" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="阈值">
+          <el-input-number v-model="ruleForm.threshold" :min="0" :precision="2" style="width:100%" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button size="small" @click="ruleFormVisible = false">取消</el-button>
+        <el-button size="small" type="primary" @click="saveRule">保存</el-button>
+      </template>
     </el-dialog>
 
     <!-- 预警记录弹窗 -->
@@ -106,11 +149,11 @@
             <el-col :span="6"><stat-card title="租户" :value="d.population?.tenantCount" color="#e6a23c" /></el-col>
           </el-row>
           <el-row :gutter="16" style="margin-top:16px">
-            <el-col :span="12"><div ref="genderChart" style="height:200px" /></el-col>
-            <el-col :span="12"><div ref="typeChart" style="height:200px" /></el-col>
+            <el-col :span="12"><div ref="genderChart" style="height:190px" /></el-col>
+            <el-col :span="12"><div ref="typeChart" style="height:190px" /></el-col>
           </el-row>
           <div ref="moveChart" style="height:220px;margin-top:12px" />
-          <div ref="buildingOccChart" class="drill-chart" style="height:260px;margin-top:12px" @click="drillTo('/property')" title="点击查看楼栋详情" />
+          <div ref="buildingOccChart" v-if="d.population?.buildingOccupancyList?.length" :style="{ height: '260px', marginTop: '12px', cursor: 'pointer' }" @click="drillTo('/property')" title="点击查看楼栋详情" />
         </el-card>
       </el-col>
 
@@ -118,10 +161,10 @@
         <el-card shadow="never" class="panel-card">
           <template #header><span class="panel-title">房屋概览</span></template>
           <el-row :gutter="16">
-            <el-col :span="12"><div ref="roomStatusChart" style="height:240px" /></el-col>
-            <el-col :span="12"><div ref="areaChart" style="height:240px" /></el-col>
+            <el-col :span="12"><div ref="roomStatusChart" style="height:220px" /></el-col>
+            <el-col :span="12"><div ref="areaChart" style="height:220px" /></el-col>
           </el-row>
-          <div ref="layoutChart" style="height:240px;margin-top:12px" />
+          <div ref="layoutChart" style="height:220px;margin-top:12px" />
         </el-card>
       </el-col>
     </el-row>
@@ -137,11 +180,10 @@
             <el-col :span="6"><stat-card title="处理中" :value="d.repair?.processingCount" color="#409eff" /></el-col>
             <el-col :span="6"><stat-card title="待确认" :value="d.repair?.waitingConfirmCount" /></el-col>
           </el-row>
-          <div ref="repairTypeChart" class="drill-chart" style="height:180px;margin-top:12px" @click="drillTo('/repair')" title="点击查看报修列表" />
-          <div ref="repairTrendChart" style="height:180px;margin-top:12px" />
-          <!-- 维修人员排名 -->
-          <div ref="workerRankChart" style="height:200px;margin-top:12px" />
-          <el-table v-if="d.repair?.overdueList?.length" :data="d.repair.overdueList" size="small" style="margin-top:12px" max-height="200"
+              <div ref="repairTypeChart" v-if="d.repair?.repairTypeTop5?.length" :style="{ height: '180px', marginTop: '12px', cursor: 'pointer' }" @click="drillTo('/repair')" title="点击查看报修列表" />
+          <div ref="repairTrendChart" v-if="d.repair?.monthlyTrend?.length" style="height:180px;margin-top:12px" />
+          <div ref="workerRankChart" v-if="d.repair?.workerRankList?.length" style="height:200px;margin-top:12px" />
+          <el-table v-if="d.repair?.overdueList?.length" :data="d.repair.overdueList" size="small" style="margin-top:12px;cursor:pointer" max-height="200"
             @row-click="drillTo('/repair')">
             <el-table-column label="编号" prop="repairNo" width="140" />
             <el-table-column label="类型" prop="repairType" />
@@ -169,7 +211,7 @@
           <div ref="feeTrendChart" style="height:220px;margin-top:12px" />
           <el-row :gutter="16" style="margin-top:12px">
             <el-col :span="12"><div ref="feeStructChart" style="height:220px" /></el-col>
-            <el-col :span="12"><div ref="feeBuildingChart" class="drill-chart" style="height:220px" @click="drillTo('/fee')" title="点击查看费用详情" /></el-col>
+            <el-col :span="12"><div ref="feeBuildingChart" v-if="d.fee?.buildingRateList?.length" :style="{ height: '220px', cursor: 'pointer' }" @click="drillTo('/fee')" title="点击查看费用详情" /></el-col>
           </el-row>
         </el-card>
       </el-col>
@@ -186,11 +228,10 @@
             <el-col :span="8"><stat-card title="超时未处理" :value="d.complaint?.overdueCount" color="#f56c6c" /></el-col>
           </el-row>
           <el-row :gutter="16" style="margin-top:12px">
-            <el-col :span="12"><div ref="complaintTypeChart" style="height:200px" /></el-col>
-            <el-col :span="12"><div ref="satisfactionChart" style="height:200px" /></el-col>
+            <el-col :span="12"><div ref="complaintTypeChart" style="height:190px" /></el-col>
+            <el-col :span="12"><div ref="satisfactionChart" style="height:190px" /></el-col>
           </el-row>
-          <!-- 处理时长趋势 -->
-          <div ref="durationChart" style="height:200px;margin-top:12px" />
+          <div ref="durationChart" style="height:190px;margin-top:12px" />
         </el-card>
       </el-col>
 
@@ -217,7 +258,7 @@
 import { ref, reactive, computed, onMounted, nextTick, getCurrentInstance } from 'vue'
 import { useRouter } from 'vue-router'
 import * as echarts from 'echarts'
-import { getDashboardAll, getDashboardBuildings, getPendingAlerts, handleAlertRecord, listAlertRules, listAlertRecords, getAllAlertRules, updateAlertRule } from '@/api/com/dashboard'
+import { getDashboardAll, getDashboardBuildings, getPendingAlerts, handleAlertRecord, listAlertRules, listAlertRecords, getAllAlertRules, updateAlertRule, addAlertRule, delAlertRule } from '@/api/com/dashboard'
 
 const { proxy } = getCurrentInstance()
 const router = useRouter()
@@ -259,7 +300,6 @@ async function refreshAll() {
       getPendingAlerts()
     ])
     Object.assign(d, dashRes.data)
-    // 从后端预警API获取待处理预警（受预警规则控制）
     const pendingList = alertRes.data || []
     alerts.value = pendingList.map(r => ({
       title: `⚠️ ${r.ruleName}：${r.metricName} 触发值=${r.triggerValue}，阈值=${r.threshold}（${r.triggerTime}）`,
@@ -271,7 +311,6 @@ async function refreshAll() {
   } finally { loading.value = false }
 }
 
-// 标记预警已处理
 function handleAlert(recordId) {
   proxy.$modal.confirm('确认将该预警标记为已处理？').then(() => {
     handleAlertRecord({ recordId, handleStatus: '已处理' }).then(() => {
@@ -291,7 +330,6 @@ function showAlertRuleDialog() {
   ruleLoading.value = true
   getAllAlertRules().then(res => {
     const list = res.data || []
-    // 补充最近触发时间（从预警记录中获取）
     alertRules.value = list
   }).finally(() => { ruleLoading.value = false })
 }
@@ -301,6 +339,47 @@ function toggleRule(row) {
   proxy.$modal.confirm(newStatus === '1' ? '确定停用该规则？' : '确定启用该规则？').then(() => {
     updateAlertRule({ ruleId: row.ruleId, status: newStatus }).then(() => {
       proxy.$modal.msgSuccess(newStatus === '1' ? '已停用' : '已启用')
+      showAlertRuleDialog()
+    })
+  }).catch(() => {})
+}
+
+// ========== 新增/编辑规则 ==========
+const ruleFormVisible = ref(false)
+const ruleForm = reactive({ ruleId: null, ruleName: '', metricKey: '', metricName: '', compareType: 'LT', threshold: 0 })
+
+function showAddRuleDialog() {
+  ruleForm.ruleId = null
+  ruleForm.ruleName = ''
+  ruleForm.metricKey = ''
+  ruleForm.metricName = ''
+  ruleForm.compareType = 'LT'
+  ruleForm.threshold = 0
+  ruleFormVisible.value = true
+}
+
+function showEditRuleDialog(row) {
+  Object.assign(ruleForm, row)
+  ruleFormVisible.value = true
+}
+
+function saveRule() {
+  if (!ruleForm.ruleName || !ruleForm.metricKey) {
+    proxy.$modal.msgWarning('请填写完整信息')
+    return
+  }
+  const save = ruleForm.ruleId ? updateAlertRule(ruleForm) : addAlertRule(ruleForm)
+  save.then(() => {
+    proxy.$modal.msgSuccess(ruleForm.ruleId ? '已更新' : '已新增')
+    ruleFormVisible.value = false
+    showAlertRuleDialog()
+  })
+}
+
+function deleteRule(row) {
+  proxy.$modal.confirm('确定删除规则"' + row.ruleName + '"？').then(() => {
+    delAlertRule(row.ruleId).then(() => {
+      proxy.$modal.msgSuccess('已删除')
       showAlertRuleDialog()
     })
   }).catch(() => {})
@@ -357,7 +436,6 @@ function renderAllCharts() {
   renderBarTrend(activityTrendChart.value, '活动场次趋势', d.activity?.monthlyTrend, 'count')
 }
 
-// === 维修人员排名柱状图 ===
 function renderWorkerRank(dom, list) {
   if (!dom || !list?.length) return
   const chart = echarts.init(dom)
@@ -375,15 +453,14 @@ function renderWorkerRank(dom, list) {
   })
 }
 
-// === ECharts 渲染工具 ===
 function renderPie(dom, name, dataMap) {
   if (!dom || !dataMap) return
   const chart = echarts.init(dom)
   const data = Object.entries(dataMap).map(([k, v]) => ({ name: k, value: v || 0 }))
   chart.setOption({
-    tooltip: { trigger: 'item' },
-    title: { text: name, left: 'center', top: 0, textStyle: { fontSize: 13 } },
-    series: [{ type: 'pie', radius: ['40%', '65%'], center: ['50%', '55%'], label: { formatter: '{b}\n{d}%' }, data, itemStyle: { borderRadius: 3 } }]
+    tooltip: { trigger: 'item', formatter: '{b}: {d}%' },
+    title: { text: name, left: 'center', top: 0, textStyle: { fontSize: 12 } },
+    series: [{ type: 'pie', radius: ['25%', '50%'], center: ['50%', '53%'], label: { formatter: '{b}', fontSize: 9, color: '#666' }, labelLine: { show: true, length: 6, length2: 6 }, data, itemStyle: { borderRadius: 2 } }]
   })
 }
 
@@ -413,7 +490,6 @@ function renderBar(dom, name, list, xKey, yKey, suffix) {
   })
 }
 
-// 柱状图 + 低于阈值红色
 function renderBarRed(dom, name, list, xKey, yKey, suffix, threshold) {
   if (!dom || !list?.length) return
   const chart = echarts.init(dom)
@@ -438,7 +514,7 @@ function renderLine(dom, list, names, keys) {
   chart.setOption({
     tooltip: { trigger: 'axis' },
     title: { text: '入住/迁出趋势', left: 'center', textStyle: { fontSize: 13 } },
-    grid: { left: 50, right: 20, top: 40, bottom: 20 },
+    grid: { left: 50, right: 20, top: 40, bottom: 40 },
     xAxis: { type: 'category', data: list.map(i => i.month?.substring(5)) },
     yAxis: { type: 'value' },
     series: [
@@ -463,7 +539,6 @@ function renderLineSimple(dom, name, list, key) {
   })
 }
 
-// Map 数据 → 柱状图（用于面积分布等）
 function renderBarSimple(dom, name, dataMap) {
   if (!dom || !dataMap) return
   const chart = echarts.init(dom)
@@ -479,7 +554,6 @@ function renderBarSimple(dom, name, dataMap) {
   })
 }
 
-// 月度趋势柱状图（用于活动场次等）
 function renderBarTrend(dom, name, list, key) {
   if (!dom || !list?.length) return
   const chart = echarts.init(dom)
@@ -516,4 +590,5 @@ onMounted(async () => {
 .panel-title { font-weight: 600; font-size: 15px }
 .drill-chart { cursor: pointer }
 .drill-chart:hover { opacity: 0.85 }
+.alert-section { margin-bottom:16px }
 </style>
