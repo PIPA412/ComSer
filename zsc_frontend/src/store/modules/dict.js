@@ -1,5 +1,3 @@
-import { defineStore } from 'pinia'
-
 const useDictStore = defineStore(
   'dict',
   {
