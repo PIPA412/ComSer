@@ -119,7 +119,10 @@ export function filterDynamicRoutes(routes) {
 export const loadView = (view) => {
   let res
   for (const path in modules) {
-    const dir = path.split('views/')[1].split('.vue')[0]
+    const nPath = path.replace(/\\/g, '/')
+    const parts = nPath.split('views/')
+    if (parts.length < 2) continue
+    const dir = parts[1].split('.vue')[0]
     if (dir === view) {
       res = () => modules[path]()
     }

@@ -71,6 +71,30 @@ export const constantRoutes = [
     ]
   },
   {
+    path: '/complaint',
+    component: Layout,
+    children: [
+      {
+        path: 'stats',
+        component: () => import('@/views/com/complaint/stats'),
+        name: 'ComplaintStats',
+        meta: { title: '数据统计', icon: 'chart' }
+      }
+    ]
+  },
+  {
+    path: '/activity',
+    component: Layout,
+    children: [
+      {
+        path: 'stats',
+        component: () => import('@/views/com/activity/stats'),
+        name: 'ActivityStats',
+        meta: { title: '活动统计', icon: 'chart' }
+      }
+    ]
+  },
+  {
     path: '/user',
     component: Layout,
     hidden: true,
