@@ -40,13 +40,4 @@ public class ComParkingRecord extends BaseEntity {
 
     /** 支付状态 */
     private String payStatus;
-
-    @com.baomidou.mybatisplus.annotation.TableField(exist = false)
-    private String plateNumber;
-
-    @com.baomidou.mybatisplus.annotation.TableField(exist = false)
-    private String ownerName;
-
-    @com.baomidou.mybatisplus.annotation.TableField(exist = false)
-    private String spotCode;
 }

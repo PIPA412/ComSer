@@ -12,7 +12,6 @@
       <template v-if="appStore.device !== 'mobile'">
         <header-search id="header-search" class="right-menu-item" />
 
-        <!-- 注释掉：缺少组件注册，不影响功能
         <el-tooltip content="源码地址" effect="dark" placement="bottom">
           <ruo-yi-git id="zsc-git" class="right-menu-item hover-effect" />
         </el-tooltip>
@@ -20,7 +19,6 @@
         <el-tooltip content="文档地址" effect="dark" placement="bottom">
           <ruo-yi-doc id="zsc-doc" class="right-menu-item hover-effect" />
         </el-tooltip>
-        -->
 
         <screenfull id="screenfull" class="right-menu-item hover-effect" />
 

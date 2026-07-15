@@ -35,7 +35,4 @@ public class ComParkingSpot extends BaseEntity {
 
     /** 月租费 */
     private java.math.BigDecimal monthlyFee;
-
-    /** 小时计费（元/小时） */
-    private java.math.BigDecimal hourlyFee;
 }

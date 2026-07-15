@@ -16,7 +16,7 @@ zsc:
 # 开发环境配置
 server:
   # 服务器的HTTP端口，默认为8080
-  port: 8081
+  port: 8080
   servlet:
     # 应用的访问路径
     context-path: /
@@ -53,19 +53,6 @@ spring:
     basename: i18n/messages
   profiles:
     active: druid
-  # 邮件配置
-  mail:
-    host: smtp.qq.com
-    port: 587
-    username: 1034001861@qq.com
-    password: roockrywwfjsbfce
-    default-encoding: UTF-8
-    properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
   # 文件上传
   servlet:
     multipart:

@@ -41,20 +41,4 @@ public class ComVehicle extends BaseEntity {
 
     /** 状态（0正常 1停用） */
     private String status;
-
-    /** 车主姓名（非数据库字段） */
-    @com.baomidou.mybatisplus.annotation.TableField(exist = false)
-    private String ownerName;
-
-    /** 车主电话（非数据库字段） */
-    @com.baomidou.mybatisplus.annotation.TableField(exist = false)
-    private String ownerPhone;
-
-    /** 所属房屋号（非数据库字段） */
-    @com.baomidou.mybatisplus.annotation.TableField(exist = false)
-    private String roomNumber;
-
-    /** 绑定车位编号（非数据库字段） */
-    @com.baomidou.mybatisplus.annotation.TableField(exist = false)
-    private String spotCode;
 }

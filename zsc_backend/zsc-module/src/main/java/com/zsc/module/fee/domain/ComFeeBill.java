@@ -1,10 +1,8 @@
 package com.zsc.module.fee.domain;
 
-import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.zsc.common.core.domain.BaseEntity;
-import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -45,7 +43,6 @@ public class ComFeeBill extends BaseEntity {
     private String billPeriod;
 
     /** 截止日期 */
-    @JsonFormat(pattern = "yyyy-MM-dd", timezone = "GMT+8")
     private Date dueDate;
 
     /** 状态（未缴/已缴/逾期） */
@@ -56,20 +53,4 @@ public class ComFeeBill extends BaseEntity {
 
     /** 支付方式（微信/支付宝/银行转账/现金） */
     private String payMethod;
-
-    /** 房间号（非数据库字段，关联查询填充） */
-    @TableField(exist = false)
-    private String roomNumber;
-
-    /** 业主姓名（非数据库字段） */
-    @TableField(exist = false)
-    private String ownerName;
-
-    /** 业主手机号（非数据库字段） */
-    @TableField(exist = false)
-    private String ownerPhone;
-
-    /** 费用项目名称（非数据库字段） */
-    @TableField(exist = false)
-    private String itemName;
 }

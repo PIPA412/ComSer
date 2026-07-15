@@ -3,32 +3,29 @@ package com.zsc.module.convenience.domain;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.annotation.TableField;
-import com.fasterxml.jackson.annotation.JsonFormat;
 import com.zsc.common.core.domain.BaseEntity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-import java.math.BigDecimal;
-import java.util.Date;
 import java.util.Map;
 
 /**
- * 服务订单 com_service_order
+ * 服务评价 com_service_review
  *
  * @author zsc
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
-@TableName("com_service_order")
-public class ComServiceOrder extends BaseEntity {
+@TableName("com_service_review")
+public class ComServiceReview extends BaseEntity {
 
     private static final long serialVersionUID = 1L;
 
     @TableId
-    private Long orderId;
+    private Long reviewId;
 
-    /** 订单编号 */
-    private String orderNo;
+    /** 订单ID */
+    private Long orderId;
 
     /** 用户ID */
     private Long userId;
@@ -36,21 +33,14 @@ public class ComServiceOrder extends BaseEntity {
     /** 服务项目ID */
     private Long itemId;
 
-    /** 联系人 */
-    private String contactName;
+    /** 服务商ID */
+    private Long providerId;
 
-    /** 联系电话 */
-    private String contactPhone;
+    /** 评分（1-5星） */
+    private Integer rating;
 
-    /** 预约时间 */
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    private Date bookingTime;
-
-    /** 订单金额 */
-    private BigDecimal amount;
-
-    /** 状态（待接单/已接单/已完成/已取消） */
-    private String status;
+    /** 评价内容 */
+    private String content;
 
     /** 服务商名称（非数据库字段，用于前端展示） */
     @TableField(exist = false)
@@ -59,6 +49,10 @@ public class ComServiceOrder extends BaseEntity {
     /** 服务名称（非数据库字段，用于前端展示） */
     @TableField(exist = false)
     private String itemName;
+
+    /** 订单编号（非数据库字段，用于前端展示） */
+    @TableField(exist = false)
+    private String orderNo;
 
     @TableField(exist = false)
     private Map<String, Object> params;

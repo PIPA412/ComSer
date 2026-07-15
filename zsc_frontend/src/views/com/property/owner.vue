@@ -229,7 +229,7 @@
           </el-col>
           <el-col :span="12">
             <el-form-item label="入住日期">
-              <el-date-picker v-model="checkInForm.checkInDate" type="date" placeholder="选择日期" value-format="yyyy-MM-dd" style="width:100%" />
+              <el-date-picker v-model="checkInForm.checkInDate" type="date" placeholder="选择日期" value-format="YYYY-MM-DD" style="width:100%" />
             </el-form-item>
           </el-col>
         </el-row>
